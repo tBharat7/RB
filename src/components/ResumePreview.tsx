@@ -99,6 +99,55 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({ data, styleOptions
           </div>
         ))}
       </div>
+
+      <div className="mb-6">
+        <h2 
+          className="text-xl font-semibold mb-4" 
+          style={{ color: styleOptions.primaryColor }}
+        >
+          Education
+        </h2>
+        {data.education.map((edu, index) => (
+          <div 
+            key={index} 
+            className={`mb-4 ${styleOptions.layout === 'creative' ? 'p-4 bg-gray-50 rounded-lg' : ''}`}
+          >
+            <div className="flex justify-between items-baseline">
+              <h3 className="text-lg font-semibold">{edu.degree}</h3>
+              <span className="text-gray-600">{edu.duration}</span>
+            </div>
+            <p className="text-gray-700 font-semibold">{edu.institution}</p>
+            <div className="mt-2 text-gray-700">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {edu.description}
+              </ReactMarkdown>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="mb-6">
+        <h2 
+          className="text-xl font-semibold mb-4" 
+          style={{ color: styleOptions.primaryColor }}
+        >
+          Skills
+        </h2>
+        <div className="flex flex-wrap gap-2">
+          {data.skills.map((skill, index) => (
+            <span 
+              key={index} 
+              className="px-3 py-1 rounded-full text-sm"
+              style={{ 
+                backgroundColor: `${styleOptions.primaryColor}20`, 
+                color: styleOptions.primaryColor 
+              }}
+            >
+              {skill}
+            </span>
+          ))}
+        </div>
+      </div>
     </div>
   );
 };
