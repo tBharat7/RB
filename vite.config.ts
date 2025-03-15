@@ -7,4 +7,6 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['lucide-react'],
   },
+  // Base path for GitHub Pages - replace REPO_NAME with your repository name
+  base: '/RB/',
 });

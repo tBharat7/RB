@@ -5,11 +5,21 @@ import { ResumePreview } from './components/ResumePreview';
 import { LayoutSelector } from './components/LayoutSelector';
 import TemplateSelector from './components/TemplateSelector';
 import ResumeAnalytics from './components/ResumeAnalytics';
+import { Auth } from './components/Auth';
+import { useNotification } from './components/Notification';
 import { ResumeData, StyleOptions } from './types';
-import { Download, Save, Upload, HelpCircle, BarChart, ChevronDown } from 'lucide-react';
+import { Download, Save, Upload, HelpCircle, BarChart, ChevronDown, LogOut, User, Database, Clock } from 'lucide-react';
 import { usePDF } from 'react-to-pdf';
 import { sampleResumeData, templateSamples } from './layouts/sampleData';
 import DragAndDropList from './components/DragAndDropList';
+import { 
+  authenticateUser, 
+  registerUser, 
+  saveUserData, 
+  getUserData,
+  loginWithGoogle,
+  GoogleUserData,
+} from './utils/userStorage';
 
 const initialResumeData: ResumeData = {
   personalInfo: {
@@ -58,16 +68,113 @@ const sampleAnalyticsData = {
   averageViewTime: '2m 34s',
 };
 
+interface UserState {
+  username: string;
+  isAuthenticated: boolean;
+  displayName?: string;
+  photoURL?: string;
+  email?: string;
+}
+
 function App() {
   const [resumeData, setResumeData] = useState<ResumeData>(initialResumeData);
   const [styleOptions, setStyleOptions] = useState<StyleOptions>(initialStyleOptions);
   const [showTips, setShowTips] = useState(false);
-  const [language, setLanguage] = useState('en');
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
+  const [user, setUser] = useState<UserState>({
+    username: '',
+    isAuthenticated: false
+  });
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const { toPDF, targetRef } = usePDF({
     filename: 'resume.pdf',
   });
+  const { showNotification, NotificationComponent } = useNotification();
+  const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
+
+  // Check if user is already logged in from a previous session
+  useEffect(() => {
+    const savedUser = localStorage.getItem('current_user');
+    if (savedUser) {
+      const userData = JSON.parse(savedUser);
+      
+      // Load user profile data along with saved resume
+      const { 
+        resumeData: savedResumeData, 
+        styleOptions: savedStyleOptions,
+        displayName,
+        photoURL,
+        email
+      } = getUserData(userData.username);
+      
+      setUser({
+        username: userData.username,
+        isAuthenticated: true,
+        displayName,
+        photoURL,
+        email
+      });
+      
+      if (savedResumeData) {
+        setResumeData(savedResumeData);
+      }
+      
+      if (savedStyleOptions) {
+        setStyleOptions(savedStyleOptions);
+      }
+    } else {
+      // Not logged in, show auth modal
+      setShowAuthModal(true);
+    }
+  }, []);
+
+  // Auto-save functionality
+  useEffect(() => {
+    let autoSaveTimer: number | undefined;
+    
+    // Only auto-save if user is authenticated, auto-save is enabled, and there have been edits
+    if (user.isAuthenticated && autoSaveEnabled && isEditing) {
+      autoSaveTimer = window.setTimeout(() => {
+        saveUserData(user.username, resumeData, styleOptions);
+        setLastSaved(new Date());
+        
+        // Show notification only for the first auto-save after enabling
+        const lastAutoSaveNotified = localStorage.getItem('last_autosave_notified');
+        const now = new Date().getTime();
+        
+        if (!lastAutoSaveNotified || (now - parseInt(lastAutoSaveNotified)) > (5 * 60 * 1000)) {
+          showNotification('Auto-save is active. Your changes will be saved automatically.', 'success');
+          localStorage.setItem('last_autosave_notified', now.toString());
+        }
+      }, 60000); // Auto-save every minute
+    }
+    
+    return () => {
+      if (autoSaveTimer) {
+        window.clearTimeout(autoSaveTimer);
+      }
+    };
+  }, [resumeData, styleOptions, user.isAuthenticated, autoSaveEnabled, isEditing, user.username]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const dropdown = document.getElementById('export-dropdown');
+      const button = document.getElementById('export-dropdown-button');
+      
+      if (dropdown && button && !dropdown.contains(event.target as Node) && !button.contains(event.target as Node)) {
+        setExportDropdownOpen(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const handleLayoutSelect = (style: StyleOptions) => {
     setStyleOptions(style);
@@ -99,19 +206,74 @@ function App() {
   };
 
   const saveResume = () => {
+    // Always prepare data for download
     const data = {
       resumeData,
       styleOptions,
     };
+    
+    // If user is authenticated, save to their profile first
+    if (user.isAuthenticated) {
+      saveUserData(user.username, resumeData, styleOptions);
+      setLastSaved(new Date());
+      showNotification('Your resume has been saved to your account and downloaded!');
+    } else {
+      showNotification('Your resume has been downloaded as a file.');
+    }
+    
+    // Always download the file
     const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'my-resume.json';
+    a.download = resumeData.personalInfo.name 
+      ? `resume_${resumeData.personalInfo.name.toLowerCase().replace(/\s+/g, '_')}.json` 
+      : 'my-resume.json';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  };
+
+  // Function to save data for consistency without download
+  const saveData = () => {
+    if (user.isAuthenticated) {
+      // Save to user's profile
+      saveUserData(user.username, resumeData, styleOptions);
+      
+      // Update last saved timestamp
+      setLastSaved(new Date());
+      
+      // Show a more detailed notification
+      if (resumeData.personalInfo.name) {
+        showNotification(`Resume for ${resumeData.personalInfo.name} saved successfully!`);
+      } else {
+        showNotification('Your resume data has been saved to your account!');
+      }
+      
+      // Set editing state to track changes
+      setIsEditing(true);
+    } else {
+      showNotification('Please log in to save your data', 'error');
+      setShowAuthModal(true);
+    }
+  };
+
+  // Format the last saved time
+  const formatLastSaved = (date: Date | null): string => {
+    if (!date) return 'Not saved yet';
+    
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffSec = Math.floor(diffMs / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHr = Math.floor(diffMin / 60);
+    
+    if (diffSec < 60) return 'Just now';
+    if (diffMin < 60) return `${diffMin} min${diffMin === 1 ? '' : 's'} ago`;
+    if (diffHr < 24) return `${diffHr} hour${diffHr === 1 ? '' : 's'} ago`;
+    
+    return date.toLocaleString();
   };
 
   const loadResume = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -132,6 +294,114 @@ function App() {
       };
       reader.readAsText(file);
     }
+  };
+
+  const handleLogin = (username: string) => {
+    // Get user data including profile info
+    const { 
+      resumeData: savedResumeData, 
+      styleOptions: savedStyleOptions,
+      displayName,
+      photoURL,
+      email 
+    } = getUserData(username);
+    
+    setUser({
+      username,
+      isAuthenticated: true,
+      displayName,
+      photoURL,
+      email
+    });
+    
+    // Save current user to localStorage
+    localStorage.setItem('current_user', JSON.stringify({ username }));
+    
+    if (savedResumeData) {
+      setResumeData(savedResumeData);
+    }
+    
+    if (savedStyleOptions) {
+      setStyleOptions(savedStyleOptions);
+    }
+    
+    setShowAuthModal(false);
+  };
+
+  const handleSignup = (username: string, password: string, email: string) => {
+    const success = registerUser(username, password, email);
+    
+    if (success) {
+      setUser({
+        username,
+        isAuthenticated: true,
+        email
+      });
+      
+      // Save current user to localStorage
+      localStorage.setItem('current_user', JSON.stringify({ username }));
+      
+      setShowAuthModal(false);
+      showNotification('Account created successfully!');
+    } else {
+      showNotification('Username already taken. Please choose another one.', 'error');
+    }
+  };
+
+  const handleGoogleSignIn = (googleData: GoogleUserData) => {
+    const result = loginWithGoogle(googleData);
+    
+    if (result.success && result.username) {
+      // Get the full user data after Google sign-in
+      const { 
+        displayName, 
+        photoURL, 
+        email,
+        resumeData: savedResumeData,
+        styleOptions: savedStyleOptions
+      } = getUserData(result.username);
+      
+      setUser({
+        username: result.username,
+        isAuthenticated: true,
+        displayName: displayName || googleData.displayName,
+        photoURL: photoURL || googleData.photoURL,
+        email: email || googleData.email
+      });
+      
+      // Save current user to localStorage
+      localStorage.setItem('current_user', JSON.stringify({ 
+        username: result.username,
+        displayName: googleData.displayName,
+        photoURL: googleData.photoURL
+      }));
+      
+      // If the user has saved data, load it
+      if (savedResumeData) {
+        setResumeData(savedResumeData);
+      }
+      
+      if (savedStyleOptions) {
+        setStyleOptions(savedStyleOptions);
+      }
+      
+      setShowAuthModal(false);
+      showNotification(`Welcome, ${googleData.displayName || googleData.email}!`);
+    } else {
+      showNotification('Failed to sign in with Google. Please try again.', 'error');
+    }
+  };
+
+  const handleLogout = () => {
+    setUser({
+      username: '',
+      isAuthenticated: false
+    });
+    
+    localStorage.removeItem('current_user');
+    setResumeData(initialResumeData);
+    setStyleOptions(initialStyleOptions);
+    setShowAuthModal(true);
   };
 
   const exportAsDocx = () => {
@@ -178,16 +448,61 @@ function App() {
   const handleResumeChange = (data: ResumeData) => {
     setResumeData(data);
     setIsEditing(true);
+    
+    // If it's been more than 2 minutes since last save and auto-save is enabled, save now
+    if (user.isAuthenticated && autoSaveEnabled && lastSaved) {
+      const now = new Date();
+      const diffMs = now.getTime() - lastSaved.getTime();
+      const diffMin = Math.floor(diffMs / (1000 * 60));
+      
+      if (diffMin >= 2) {
+        saveUserData(user.username, data, styleOptions);
+        setLastSaved(now);
+        showNotification('Changes auto-saved');
+      }
+    }
   };
+
+  // Show auth modal if user is not authenticated
+  if (showAuthModal) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-sky-50 py-10 flex items-center justify-center">
+        <Auth 
+          onLogin={handleLogin} 
+          onSignup={handleSignup} 
+          onGoogleSignIn={handleGoogleSignIn}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-sky-50 py-10">
+      {NotificationComponent}
       <div className="max-w-7xl mx-auto px-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-10">
           <h1 className="text-3xl font-extralight text-slate-800 tracking-tight">
             <span className="text-sky-500 font-normal">Resume</span> Builder
           </h1>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 items-center">
+            {user.isAuthenticated && (
+              <div className="flex items-center text-slate-600 mr-4">
+                {user.photoURL ? (
+                  <img 
+                    src={user.photoURL} 
+                    alt={user.displayName || user.username} 
+                    className="h-8 w-8 rounded-full mr-2 border border-sky-200"
+                  />
+                ) : (
+                  <div className="h-8 w-8 rounded-full bg-sky-100 flex items-center justify-center mr-2">
+                    <User className="h-4 w-4 text-sky-500" />
+                  </div>
+                )}
+                <span className="font-medium">
+                  {user.displayName || user.username}
+                </span>
+              </div>
+            )}
             <button
               onClick={() => setShowTips(!showTips)}
               className="flex items-center gap-1.5 bg-white text-slate-600 px-3 py-2 rounded-lg border border-slate-200 hover:border-sky-200 hover:text-sky-600 hover:shadow-sm transition-all duration-200"
@@ -195,88 +510,120 @@ function App() {
               <HelpCircle size={16} />
               {showTips ? 'Hide Tips' : 'Show Tips'}
             </button>
-            <select 
-              value={language}
-              onChange={(e) => setLanguage(e.target.value)}
-              className="bg-white border border-slate-200 text-slate-600 px-3 py-2 rounded-lg hover:border-sky-200 focus:border-sky-300 focus:ring-1 focus:ring-sky-200 transition-all duration-200"
-            >
-              <option value="en">English</option>
-              <option value="es">Español</option>
-              <option value="fr">Français</option>
-              <option value="de">Deutsch</option>
-            </select>
             <button
               onClick={handleClearForm}
               className="flex items-center gap-1.5 bg-white text-slate-600 px-3 py-2 rounded-lg border border-slate-200 hover:border-sky-200 hover:text-sky-600 hover:shadow-sm transition-all duration-200"
             >
               Clear Form
             </button>
-            <div className="relative group">
+            <div className="relative">
               <button
+                id="export-dropdown-button"
+                onClick={() => setExportDropdownOpen(!exportDropdownOpen)}
                 className="flex items-center gap-1.5 bg-white text-slate-600 px-3 py-2 rounded-lg border border-slate-200 hover:border-sky-200 hover:text-sky-600 hover:shadow-sm transition-all duration-200"
+                aria-haspopup="true"
+                aria-expanded={exportDropdownOpen}
               >
                 <Download size={16} />
-                Export <ChevronDown size={12} />
+                Export <ChevronDown size={12} className={`transition-transform duration-200 ${exportDropdownOpen ? 'rotate-180' : ''}`} />
               </button>
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-slate-100 hidden group-hover:block z-10 animate-fade-in">
-                <ul className="py-1">
-                  <li>
-                    <button
-                      onClick={() => toPDF()}
-                      className="block px-4 py-2 text-sm text-slate-600 hover:text-sky-600 hover:bg-sky-50 w-full text-left transition-colors duration-150"
-                    >
-                      Export as PDF
-                    </button>
-                  </li>
-                  <li>
-                    <button
-                      onClick={exportAsDocx}
-                      className="block px-4 py-2 text-sm text-slate-600 hover:text-sky-600 hover:bg-sky-50 w-full text-left transition-colors duration-150"
-                    >
-                      Export as DOCX
-                    </button>
-                  </li>
-                  <li>
-                    <button
-                      onClick={exportAsPlainText}
-                      className="block px-4 py-2 text-sm text-slate-600 hover:text-sky-600 hover:bg-sky-50 w-full text-left transition-colors duration-150"
-                    >
-                      Export as Plain Text
-                    </button>
-                  </li>
-                </ul>
-              </div>
+              {exportDropdownOpen && (
+                <div 
+                  id="export-dropdown"
+                  className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-slate-100 z-10 animate-fade-in"
+                >
+                  <ul className="py-1" role="menu">
+                    <li role="menuitem">
+                      <button
+                        onClick={() => {
+                          toPDF();
+                          setExportDropdownOpen(false);
+                        }}
+                        className="block px-4 py-2 text-sm text-slate-600 hover:text-sky-600 hover:bg-sky-50 w-full text-left transition-colors duration-150"
+                      >
+                        Export as PDF
+                      </button>
+                    </li>
+                    <li role="menuitem">
+                      <button
+                        onClick={() => {
+                          exportAsDocx();
+                          setExportDropdownOpen(false);
+                        }}
+                        className="block px-4 py-2 text-sm text-slate-600 hover:text-sky-600 hover:bg-sky-50 w-full text-left transition-colors duration-150"
+                      >
+                        Export as DOCX
+                      </button>
+                    </li>
+                    <li role="menuitem">
+                      <button
+                        onClick={() => {
+                          exportAsPlainText();
+                          setExportDropdownOpen(false);
+                        }}
+                        className="block px-4 py-2 text-sm text-slate-600 hover:text-sky-600 hover:bg-sky-50 w-full text-left transition-colors duration-150"
+                      >
+                        Export as Plain Text
+                      </button>
+                    </li>
+                  </ul>
+                </div>
+              )}
             </div>
-            <button
-              onClick={saveResume}
-              className="flex items-center gap-1.5 bg-white text-slate-600 px-3 py-2 rounded-lg border border-slate-200 hover:border-sky-200 hover:text-sky-600 hover:shadow-sm transition-all duration-200"
+            
+            <label
+              className="flex items-center gap-1.5 bg-white text-slate-600 px-3 py-2 rounded-lg border border-slate-200 hover:border-sky-200 hover:text-sky-600 hover:shadow-sm transition-all duration-200 cursor-pointer"
             >
-              <Save size={16} />
-              Save
-            </button>
-            <div className="relative">
+              <Upload size={16} />
+              Import
               <input
                 type="file"
-                id="load-resume"
-                accept=".json"
                 onChange={loadResume}
                 className="hidden"
+                accept=".json"
               />
-              <label
-                htmlFor="load-resume"
-                className="flex items-center gap-1.5 bg-white text-slate-600 px-3 py-2 rounded-lg border border-slate-200 hover:border-sky-200 hover:text-sky-600 hover:shadow-sm transition-all duration-200 cursor-pointer"
-              >
-                <Upload size={16} />
-                Load
-              </label>
-            </div>
+            </label>
+            
             <button
-              onClick={() => setShowAnalytics(!showAnalytics)}
-              className="flex items-center gap-1.5 bg-white text-slate-600 px-3 py-2 rounded-lg border border-slate-200 hover:border-sky-200 hover:text-sky-600 hover:shadow-sm transition-all duration-200"
+              onClick={saveResume}
+              className="flex items-center gap-1.5 bg-sky-500 text-white px-3 py-2 rounded-lg hover:bg-sky-600 transition-all duration-200"
             >
-              <BarChart size={16} />
-              Analytics
+              <Save size={16} />
+              Save & Download
             </button>
+            
+            {user.isAuthenticated && (
+              <>
+                <button
+                  onClick={() => {
+                    const newState = !autoSaveEnabled;
+                    setAutoSaveEnabled(newState);
+                    if (newState) {
+                      showNotification('Auto-save enabled. Your changes will be saved automatically.', 'success');
+                    } else {
+                      showNotification('Auto-save disabled. Remember to save your work manually.', 'error');
+                    }
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border transition-colors duration-200 ${
+                    autoSaveEnabled 
+                      ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100' 
+                      : 'bg-white text-slate-600 border-slate-200 hover:border-sky-200 hover:text-sky-600'
+                  }`}
+                  title={autoSaveEnabled ? "Auto-save is on. Your work is saved automatically every minute." : "Auto-save is off. Remember to save manually."}
+                >
+                  <Clock size={16} />
+                  {autoSaveEnabled ? 'Auto-Save On' : 'Auto-Save Off'}
+                </button>
+                
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-1.5 bg-white text-slate-600 px-3 py-2 rounded-lg border border-slate-200 hover:border-red-200 hover:text-red-600 hover:shadow-sm transition-all duration-200 ml-2"
+                >
+                  <LogOut size={16} />
+                  Logout
+                </button>
+              </>
+            )}
           </div>
         </div>
 
@@ -288,13 +635,29 @@ function App() {
           </div>
         )}
 
+        {user.isAuthenticated && (
+          <div className="mb-4 text-sm text-slate-500 flex items-center justify-end">
+            <Clock size={14} className="mr-1" />
+            <span>
+              {autoSaveEnabled ? (
+                <>
+                  {lastSaved ? `Auto-save enabled · Last saved: ${formatLastSaved(lastSaved)}` : 'Auto-save enabled · No changes saved yet'}
+                </>
+              ) : (
+                <>
+                  Auto-save disabled {lastSaved && `· Last saved: ${formatLastSaved(lastSaved)}`}
+                </>
+              )}
+            </span>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="space-y-8">
             <ResumeForm 
               data={resumeData} 
               onChange={handleResumeChange} 
               showTips={showTips}
-              language={language}
               onImportLinkedIn={importFromLinkedIn}
             />
             <StyleControls options={styleOptions} onChange={setStyleOptions} />

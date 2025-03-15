@@ -7,7 +7,6 @@ interface ResumeFormProps {
   data: ResumeData;
   onChange: (data: ResumeData) => void;
   showTips?: boolean;
-  language?: string;
   onImportLinkedIn?: () => void;
 }
 
@@ -18,110 +17,31 @@ interface SectionConfig {
   tip: string;
 }
 
-const sectionConfigs: Record<string, Record<string, SectionConfig>> = {
-  en: {
-    personalInfo: {
-      id: 'personalInfo',
-      title: 'Personal Information',
-      icon: <Info size={20} />,
-      tip: 'Include contact details that allow recruiters to easily reach you. Keep your summary concise and focused on your career goals.'
-    },
-    experience: {
-      id: 'experience',
-      title: 'Work Experience',
-      icon: <Briefcase size={20} />,
-      tip: 'Start with your most recent position. Focus on accomplishments rather than duties. Use action verbs and quantify results whenever possible.'
-    },
-    education: {
-      id: 'education',
-      title: 'Education',
-      icon: <GraduationCap size={20} />,
-      tip: 'For experienced professionals, keep education brief. For recent graduates, include relevant coursework, honors, and extracurricular activities.'
-    },
-    skills: {
-      id: 'skills',
-      title: 'Skills',
-      icon: <Award size={20} />,
-      tip: "List skills relevant to the job you're applying for. Include both technical and soft skills."
-    },
+// Simplified to use only English
+const sectionConfigs: Record<string, SectionConfig> = {
+  personalInfo: {
+    id: 'personalInfo',
+    title: 'Personal Information',
+    icon: <Info size={16} />,
+    tip: 'Include contact details and a brief summary that highlights your key strengths and career objectives.'
   },
-  es: {
-    personalInfo: {
-      id: 'personalInfo',
-      title: 'Información Personal',
-      icon: <Info size={20} />,
-      tip: 'Incluya detalles de contacto que permitan a los reclutadores comunicarse fácilmente con usted. Mantenga su resumen conciso y centrado en sus objetivos profesionales.'
-    },
-    experience: {
-      id: 'experience',
-      title: 'Experiencia Laboral',
-      icon: <Briefcase size={20} />,
-      tip: 'Comience con su posición más reciente. Concéntrese en los logros en lugar de las tareas. Use verbos de acción y cuantifique los resultados siempre que sea posible.'
-    },
-    education: {
-      id: 'education',
-      title: 'Educación',
-      icon: <GraduationCap size={20} />,
-      tip: 'Para profesionales con experiencia, mantenga la educación breve. Para recién graduados, incluya cursos relevantes, honores y actividades extracurriculares.'
-    },
-    skills: {
-      id: 'skills',
-      title: 'Habilidades',
-      icon: <Award size={20} />,
-      tip: 'Enumere las habilidades relevantes para el trabajo al que está aplicando. Incluya habilidades técnicas y sociales.'
-    },
+  experience: {
+    id: 'experience',
+    title: 'Work Experience',
+    icon: <Briefcase size={16} />,
+    tip: 'List your work history with the most recent position first. Focus on accomplishments and quantifiable results rather than just responsibilities.'
   },
-  fr: {
-    personalInfo: {
-      id: 'personalInfo',
-      title: 'Informations Personnelles',
-      icon: <Info size={20} />,
-      tip: 'Incluez des coordonnées qui permettent aux recruteurs de vous contacter facilement. Gardez votre résumé concis et axé sur vos objectifs de carrière.'
-    },
-    experience: {
-      id: 'experience',
-      title: 'Expérience Professionnelle',
-      icon: <Briefcase size={20} />,
-      tip: 'Commencez par votre poste le plus récent. Concentrez-vous sur les réalisations plutôt que sur les tâches. Utilisez des verbes d\'action et quantifiez les résultats dans la mesure du possible.'
-    },
-    education: {
-      id: 'education',
-      title: 'Éducation',
-      icon: <GraduationCap size={20} />,
-      tip: 'Pour les professionnels expérimentés, maintenez l\'éducation brève. Pour les récents diplômés, incluez des cours pertinents, des honneurs et des activités parascolaires.'
-    },
-    skills: {
-      id: 'skills',
-      title: 'Compétences',
-      icon: <Award size={20} />,
-      tip: 'Listez les compétences pertinentes pour le poste auquel vous postulez. Incluez à la fois des compétences techniques et humaines.'
-    },
+  education: {
+    id: 'education',
+    title: 'Education',
+    icon: <GraduationCap size={16} />,
+    tip: 'Include degrees, certifications, and relevant courses. For recent graduates, this section can be more detailed than for experienced professionals.'
   },
-  de: {
-    personalInfo: {
-      id: 'personalInfo',
-      title: 'Persönliche Informationen',
-      icon: <Info size={20} />,
-      tip: 'Geben Sie Kontaktdaten an, mit denen Personalvermittler Sie leicht erreichen können. Halten Sie Ihre Zusammenfassung prägnant und konzentrieren Sie sich auf Ihre Karriereziele.'
-    },
-    experience: {
-      id: 'experience',
-      title: 'Berufserfahrung',
-      icon: <Briefcase size={20} />,
-      tip: 'Beginnen Sie mit Ihrer neuesten Position. Konzentrieren Sie sich auf Erfolge anstatt auf Pflichten. Verwenden Sie Aktionsverben und quantifizieren Sie Ergebnisse, wann immer möglich.'
-    },
-    education: {
-      id: 'education',
-      title: 'Bildung',
-      icon: <GraduationCap size={20} />,
-      tip: 'Für erfahrene Fachleute halten Sie die Ausbildung kurz. Für kürzlich Absolventen sollten relevante Kurse, Auszeichnungen und außerschulische Aktivitäten enthalten sein.'
-    },
-    skills: {
-      id: 'skills',
-      title: 'Fähigkeiten',
-      icon: <Award size={20} />,
-      tip: 'Listen Sie Fähigkeiten auf, die für die Stelle relevant sind, auf die Sie sich bewerben. Schließen Sie sowohl technische als auch Soft Skills ein.'
-    },
+  skills: {
+    id: 'skills',
+    title: 'Skills',
+    icon: <Award size={16} />,
+    tip: 'Include both technical skills and soft skills. Consider organizing them into categories if you have many.'
   }
 };
 
@@ -129,12 +49,9 @@ export const ResumeForm: React.FC<ResumeFormProps> = ({
   data, 
   onChange, 
   showTips = false, 
-  language = 'en',
   onImportLinkedIn = () => {} 
 }) => {
   const [sectionOrder, setSectionOrder] = useState(['personalInfo', 'experience', 'education', 'skills']);
-  const lang = sectionConfigs[language] ? language : 'en';
-  const sections = sectionConfigs[lang];
   const [activeSection, setActiveSection] = useState<string>('personalInfo');
 
   const updatePersonalInfo = (field: string, value: string) => {
@@ -239,30 +156,35 @@ export const ResumeForm: React.FC<ResumeFormProps> = ({
   };
 
   const renderSectionContent = (sectionId: string) => {
+    const section = sectionConfigs[sectionId];
+    if (!section) return null;
+    
     switch (sectionId) {
       case 'personalInfo':
         return (
-          <div className="space-y-5 animate-fade-in">
-            <div>
-              <label className="block text-sm font-medium text-slate-600 mb-2">Full Name</label>
-              <input
-                type="text"
-                value={data.personalInfo.name}
-                onChange={(e) => updatePersonalInfo('name', e.target.value)}
-                className="w-full p-3 border border-slate-200 rounded-lg shadow-sm focus:ring-2 focus:ring-sky-500 focus:border-transparent transition duration-200"
-                placeholder="John Doe"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-slate-600 mb-2">Job Title</label>
-              <input
-                type="text"
-                value={data.personalInfo.title}
-                onChange={(e) => updatePersonalInfo('title', e.target.value)}
-                className="w-full p-3 border border-slate-200 rounded-lg shadow-sm focus:ring-2 focus:ring-sky-500 focus:border-transparent transition duration-200"
-                placeholder="Software Engineer"
-              />
+          <div className="space-y-4 animate-fade-in">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-600 mb-2">Full Name</label>
+                <input
+                  type="text"
+                  value={data.personalInfo.name}
+                  onChange={(e) => updatePersonalInfo('name', e.target.value)}
+                  placeholder="e.g. John Doe"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-400 transition-colors duration-200"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-slate-600 mb-2">Job Title</label>
+                <input
+                  type="text"
+                  value={data.personalInfo.title}
+                  onChange={(e) => updatePersonalInfo('title', e.target.value)}
+                  className="w-full p-3 border border-slate-200 rounded-lg shadow-sm focus:ring-2 focus:ring-sky-500 focus:border-transparent transition duration-200"
+                  placeholder="Software Engineer"
+                />
+              </div>
             </div>
             
             <div className="grid grid-cols-2 gap-4">
@@ -522,60 +444,92 @@ export const ResumeForm: React.FC<ResumeFormProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm px-6 py-6 hover:shadow-md transition-shadow duration-300">
-      <div className="mb-8">
-        <div className="flex border-b border-slate-200">
-          <button
-            type="button"
-            className={`relative px-4 py-3 text-sm font-medium transition-colors duration-200 ${
-              activeSection === 'personalInfo'
-                ? 'text-sky-600 border-b-2 border-sky-500'
-                : 'text-slate-600 hover:text-sky-600'
-            }`}
-            onClick={() => setActiveSection('personalInfo')}
-          >
-            Personal Info
-          </button>
-          <button
-            type="button"
-            className={`relative px-4 py-3 text-sm font-medium transition-colors duration-200 ${
-              activeSection === 'experience'
-                ? 'text-sky-600 border-b-2 border-sky-500'
-                : 'text-slate-600 hover:text-sky-600'
-            }`}
-            onClick={() => setActiveSection('experience')}
-          >
-            Experience
-          </button>
-          <button
-            type="button"
-            className={`relative px-4 py-3 text-sm font-medium transition-colors duration-200 ${
-              activeSection === 'education'
-                ? 'text-sky-600 border-b-2 border-sky-500'
-                : 'text-slate-600 hover:text-sky-600'
-            }`}
-            onClick={() => setActiveSection('education')}
-          >
-            Education
-          </button>
-          <button
-            type="button"
-            className={`relative px-4 py-3 text-sm font-medium transition-colors duration-200 ${
-              activeSection === 'skills'
-                ? 'text-sky-600 border-b-2 border-sky-500'
-                : 'text-slate-600 hover:text-sky-600'
-            }`}
-            onClick={() => setActiveSection('skills')}
-          >
-            Skills
-          </button>
-        </div>
+    <div className="bg-white rounded-xl p-6 shadow-sm divide-y divide-slate-100">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-xl font-medium text-slate-700">Resume Information</h2>
+        <button
+          onClick={onImportLinkedIn}
+          className="flex items-center gap-1.5 text-sm text-slate-600 hover:text-sky-600 transition-colors"
+        >
+          <Linkedin size={16} /> Import from LinkedIn
+        </button>
       </div>
-
-      {activeSection === 'personalInfo' && renderSectionContent('personalInfo')}
-      {activeSection === 'experience' && renderSectionContent('experience')}
-      {activeSection === 'education' && renderSectionContent('education')}
-      {activeSection === 'skills' && renderSectionContent('skills')}
+      
+      <div className="py-4">
+        <h3 className="flex items-center gap-2 text-slate-700 mb-4">
+          {sectionConfigs['personalInfo'].icon}
+          <span>{sectionConfigs['personalInfo'].title}</span>
+        </h3>
+        
+        {showTips && (
+          <div className="bg-sky-50 text-sky-800 p-3 rounded-lg mb-4 text-sm">
+            <p>{sectionConfigs['personalInfo'].tip}</p>
+          </div>
+        )}
+        
+        {renderSectionContent('personalInfo')}
+      </div>
+      
+      {sectionOrder.filter(s => s !== 'personalInfo').map((sectionId) => {
+        const section = sectionConfigs[sectionId];
+        if (!section) return null;
+        
+        const isActive = activeSection === sectionId;
+        
+        return (
+          <div key={sectionId} className="py-4">
+            <div
+              className="flex justify-between items-center gap-2 mb-4 cursor-pointer"
+              onClick={() => setActiveSection(isActive ? '' : sectionId)}
+            >
+              <h3 className="flex items-center gap-2 text-slate-700">
+                {section.icon}
+                <span>{section.title}</span>
+              </h3>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    moveSectionUp(sectionId);
+                  }}
+                  disabled={sectionOrder.indexOf(sectionId) <= 1}
+                  className={`p-1 rounded-md ${
+                    sectionOrder.indexOf(sectionId) <= 1
+                      ? 'text-slate-300 cursor-not-allowed'
+                      : 'text-slate-500 hover:bg-slate-100'
+                  }`}
+                >
+                  <ArrowUp size={16} />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    moveSectionDown(sectionId);
+                  }}
+                  disabled={sectionOrder.indexOf(sectionId) >= sectionOrder.length - 1}
+                  className={`p-1 rounded-md ${
+                    sectionOrder.indexOf(sectionId) >= sectionOrder.length - 1
+                      ? 'text-slate-300 cursor-not-allowed'
+                      : 'text-slate-500 hover:bg-slate-100'
+                  }`}
+                >
+                  <ArrowDown size={16} />
+                </button>
+              </div>
+            </div>
+            
+            {showTips && (
+              <div className={`bg-sky-50 text-sky-800 p-3 rounded-lg mb-4 text-sm ${isActive ? 'block' : 'hidden'}`}>
+                <p>{section.tip}</p>
+              </div>
+            )}
+            
+            <div className={isActive ? 'block' : 'hidden'}>
+              {renderSectionContent(sectionId)}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 };
