@@ -4,6 +4,10 @@ services:
     env: node
     buildCommand: ./build.sh
     startCommand: ./start.sh
+    plan: free
+    runtime: node
+    autoDeploy: true
+    nodeVersion: 18.x
     envVars:
       - key: NODE_ENV
         value: production
