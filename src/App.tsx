@@ -207,12 +207,28 @@ function App() {
       layout: templateId as StyleOptions['layout'],
     });
     
-    // Load appropriate sample data for this template
-    if (templateSamples[templateId]) {
-      // If the user hasn't started editing, or if they're just previewing
-      if (!isEditing) {
+    // Load appropriate sample data for this template ONLY if the form is empty or hasn't been edited
+    if (templateSamples[templateId] && !isEditing) {
+      // If we're in the initial state or the form is empty, load template sample data
+      const isEmpty = 
+        !resumeData.personalInfo.name && 
+        !resumeData.personalInfo.email && 
+        resumeData.experience.length === 0 && 
+        resumeData.education.length === 0 && 
+        resumeData.skills.length === 0;
+      
+      if (isEmpty) {
         setResumeData(templateSamples[templateId]);
+        showNotification(`${templateId.charAt(0).toUpperCase() + templateId.slice(1)} template applied with sample data.`);
       }
+    }
+  };
+
+  const loadTemplateSampleData = (templateId: string) => {
+    if (templateSamples[templateId]) {
+      setResumeData(templateSamples[templateId]);
+      showNotification(`${templateId.charAt(0).toUpperCase() + templateId.slice(1)} template sample data loaded`);
+      // We're intentionally not setting isEditing to true here because this is template data
     }
   };
 
@@ -471,13 +487,26 @@ function App() {
   const importFromLinkedIn = () => {
     // This is a placeholder for LinkedIn import functionality
     // In a real implementation, you would use LinkedIn's API
-    alert('LinkedIn import functionality would be implemented here');
+    alert('LinkedIn import functionality is coming soon!');
   };
 
   // Track when the user starts editing
   const handleResumeChange = (data: ResumeData) => {
     setResumeData(data);
-    setIsEditing(true);
+    
+    // Check if there are any meaningful changes compared to the initial state
+    const hasContent = 
+      data.personalInfo.name.trim() !== '' || 
+      data.personalInfo.email.trim() !== '' || 
+      data.personalInfo.phone.trim() !== '' ||
+      data.personalInfo.summary.trim() !== '' ||
+      data.experience.length > 0 ||
+      data.education.length > 0 ||
+      data.skills.length > 0;
+    
+    if (hasContent) {
+      setIsEditing(true);
+    }
     
     // If it's been more than 2 minutes since last save and auto-save is enabled, save now
     if (user.isAuthenticated && autoSaveEnabled && lastSaved) {
@@ -715,7 +744,11 @@ function App() {
           </div>
         </div>
 
-        <TemplateSelector onSelect={handleTemplateSelect} activeTemplate={styleOptions.layout} />
+        <TemplateSelector 
+          onSelect={handleTemplateSelect} 
+          activeTemplate={styleOptions.layout} 
+          onLoadSampleData={loadTemplateSampleData}
+        />
 
         {showAnalytics && (
           <div className="mb-8 animate-fade-in">

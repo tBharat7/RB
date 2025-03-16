@@ -1,10 +1,11 @@
 import React from 'react';
 import { StyleOptions } from '../types';
-import { Check } from 'lucide-react';
+import { Check, FileText } from 'lucide-react';
 
 interface TemplateSelectorProps {
   onSelect: (template: string) => void;
   activeTemplate: string;
+  onLoadSampleData?: (template: string) => void;
 }
 
 const templates = [
@@ -40,12 +41,28 @@ const templates = [
   }
 ];
 
-const TemplateSelector: React.FC<TemplateSelectorProps> = ({ onSelect, activeTemplate }) => {
+const TemplateSelector: React.FC<TemplateSelectorProps> = ({ 
+  onSelect, 
+  activeTemplate,
+  onLoadSampleData 
+}) => {
   return (
     <div className="mb-8">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-base font-medium text-slate-700">Template</h2>
-        <div className="text-xs text-slate-500">Select a template style</div>
+        <div className="flex items-center gap-3">
+          {onLoadSampleData && (
+            <button
+              onClick={() => onLoadSampleData(activeTemplate)}
+              className="text-xs px-3 py-1.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center gap-1.5 border border-slate-200"
+              title="Load sample data for this template"
+            >
+              <FileText size={12} />
+              <span>Load Sample Data</span>
+            </button>
+          )}
+          <div className="text-xs text-slate-500">Select a template style</div>
+        </div>
       </div>
       
       <div className="flex overflow-x-auto pb-2 scrollbar-hide space-x-3">

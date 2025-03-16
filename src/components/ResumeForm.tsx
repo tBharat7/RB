@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ResumeData } from '../types';
-import { Plus, Minus, Briefcase, GraduationCap, Award, ArrowUp, ArrowDown, Linkedin, Info } from 'lucide-react';
+import { Plus, Minus, Briefcase, GraduationCap, Award, ArrowUp, ArrowDown, Linkedin, Info, ChevronDown, ChevronRight } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable, DroppableProvided, DraggableProvided, DropResult } from 'react-beautiful-dnd';
 
 interface ResumeFormProps {
@@ -22,25 +22,25 @@ const sectionConfigs: Record<string, SectionConfig> = {
   personalInfo: {
     id: 'personalInfo',
     title: 'Personal Information',
-    icon: <Info size={16} />,
+    icon: <Info size={14} />,
     tip: 'Include contact details and a brief summary that highlights your key strengths and career objectives.'
   },
   experience: {
     id: 'experience',
     title: 'Work Experience',
-    icon: <Briefcase size={16} />,
+    icon: <Briefcase size={14} />,
     tip: 'List your work history with the most recent position first. Focus on accomplishments and quantifiable results rather than just responsibilities.'
   },
   education: {
     id: 'education',
     title: 'Education',
-    icon: <GraduationCap size={16} />,
+    icon: <GraduationCap size={14} />,
     tip: 'Include degrees, certifications, and relevant courses. For recent graduates, this section can be more detailed than for experienced professionals.'
   },
   skills: {
     id: 'skills',
     title: 'Skills',
-    icon: <Award size={16} />,
+    icon: <Award size={14} />,
     tip: 'Include both technical skills and soft skills. Consider organizing them into categories if you have many.'
   }
 };
@@ -53,6 +53,7 @@ export const ResumeForm: React.FC<ResumeFormProps> = ({
 }) => {
   const [sectionOrder, setSectionOrder] = useState(['personalInfo', 'experience', 'education', 'skills']);
   const [activeSection, setActiveSection] = useState<string>('personalInfo');
+  const [activeTab, setActiveTab] = useState<string>('personalInfo');
 
   const updatePersonalInfo = (field: string, value: string) => {
     onChange({
@@ -162,10 +163,10 @@ export const ResumeForm: React.FC<ResumeFormProps> = ({
     switch (sectionId) {
       case 'personalInfo':
         return (
-          <div className="space-y-4 animate-fade-in">
+          <div className="space-y-5 animate-fade-in">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-600 mb-2">Full Name</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Full Name</label>
                 <input
                   type="text"
                   value={data.personalInfo.name}
@@ -176,58 +177,58 @@ export const ResumeForm: React.FC<ResumeFormProps> = ({
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-slate-600 mb-2">Job Title</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Job Title</label>
                 <input
                   type="text"
                   value={data.personalInfo.title}
                   onChange={(e) => updatePersonalInfo('title', e.target.value)}
-                  className="w-full p-3 border border-slate-200 rounded-lg shadow-sm focus:ring-2 focus:ring-sky-500 focus:border-transparent transition duration-200"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-400 transition-colors duration-200"
                   placeholder="Software Engineer"
                 />
               </div>
             </div>
             
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-600 mb-2">Email</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Email</label>
                 <input
                   type="email"
                   value={data.personalInfo.email}
                   onChange={(e) => updatePersonalInfo('email', e.target.value)}
-                  className="w-full p-3 border border-slate-200 rounded-lg shadow-sm focus:ring-2 focus:ring-sky-500 focus:border-transparent transition duration-200"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-400 transition-colors duration-200"
                   placeholder="johndoe@example.com"
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-slate-600 mb-2">Phone</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Phone</label>
                 <input
                   type="tel"
                   value={data.personalInfo.phone}
                   onChange={(e) => updatePersonalInfo('phone', e.target.value)}
-                  className="w-full p-3 border border-slate-200 rounded-lg shadow-sm focus:ring-2 focus:ring-sky-500 focus:border-transparent transition duration-200"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-400 transition-colors duration-200"
                   placeholder="(123) 456-7890"
                 />
               </div>
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-slate-600 mb-2">Location</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Location</label>
               <input
                 type="text"
                 value={data.personalInfo.location}
                 onChange={(e) => updatePersonalInfo('location', e.target.value)}
-                className="w-full p-3 border border-slate-200 rounded-lg shadow-sm focus:ring-2 focus:ring-sky-500 focus:border-transparent transition duration-200"
+                className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-400 transition-colors duration-200"
                 placeholder="New York, NY"
               />
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-slate-600 mb-2">Summary</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Summary</label>
               <textarea
                 value={data.personalInfo.summary}
                 onChange={(e) => updatePersonalInfo('summary', e.target.value)}
-                className="w-full p-3 border border-slate-200 rounded-lg shadow-sm focus:ring-2 focus:ring-sky-500 focus:border-transparent h-32 resize-none transition duration-200"
+                className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-400 h-28 resize-none transition-colors duration-200"
                 placeholder="A brief summary of your professional background and career objectives..."
               />
             </div>
@@ -236,300 +237,399 @@ export const ResumeForm: React.FC<ResumeFormProps> = ({
 
       case 'experience':
         return (
-          <div className="space-y-8 animate-fade-in">
-            {data.experience.map((job, index) => (
-              <div key={index} className="p-5 border border-slate-200 rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow duration-300">
-                <div className="flex justify-between items-start mb-4">
-                  <h3 className="text-lg font-medium text-slate-700">Experience #{index + 1}</h3>
-                  <button
-                    type="button"
-                    onClick={() => removeExperience(index)}
-                    className="text-rose-500 hover:bg-rose-50 p-1.5 rounded-full transition-colors duration-200"
-                    aria-label="Remove experience"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </button>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-600 mb-2">Company</label>
+          <div className="space-y-6 animate-fade-in">
+            {data.experience.length === 0 ? (
+              <div className="text-center py-10 bg-slate-50 rounded-lg border border-slate-100 border-dashed">
+                <Briefcase size={30} className="mx-auto text-slate-300 mb-3" />
+                <p className="text-slate-600 font-medium">No work experience added yet</p>
+                <p className="text-slate-400 text-sm mt-1 max-w-md mx-auto">Add your professional experience to showcase your career journey and achievements.</p>
+                <button
+                  type="button"
+                  onClick={addExperience}
+                  className="mt-4 inline-flex items-center px-4 py-2 bg-sky-50 border border-sky-100 rounded-md text-sky-600 hover:bg-sky-100 transition-colors duration-200"
+                >
+                  <Plus size={16} className="mr-1.5" />
+                  Add Work Experience
+                </button>
+              </div>
+            ) : (
+              data.experience.map((job, index) => (
+                <div key={index} className="p-5 border border-slate-200 rounded-lg bg-white shadow-sm hover:shadow transition-all duration-200">
+                  <div className="flex justify-between items-start mb-4">
+                    <h3 className="text-base font-medium text-slate-800 flex items-center">
+                      <Briefcase size={15} className="mr-2 text-sky-500" />
+                      <span>Position #{index + 1}</span>
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={() => removeExperience(index)}
+                      className="text-slate-400 hover:text-rose-500 p-1 rounded-full hover:bg-slate-100 transition-all duration-200"
+                      aria-label="Remove experience"
+                    >
+                      <Minus size={15} />
+                    </button>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1.5 flex items-center">
+                        <Briefcase size={13} className="mr-1.5 text-slate-400" />
+                        Company
+                      </label>
+                      <input
+                        type="text"
+                        value={job.company}
+                        onChange={(e) => updateExperience(index, 'company', e.target.value)}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-400 transition-colors duration-200"
+                        placeholder="Company Name"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1.5">Position</label>
+                      <input
+                        type="text"
+                        value={job.position}
+                        onChange={(e) => updateExperience(index, 'position', e.target.value)}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-400 transition-colors duration-200"
+                        placeholder="Job Title"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Date</label>
                     <input
                       type="text"
-                      value={job.company}
-                      onChange={(e) => updateExperience(index, 'company', e.target.value)}
-                      className="w-full p-3 border border-slate-200 rounded-lg shadow-sm focus:ring-2 focus:ring-sky-500 focus:border-transparent transition duration-200"
-                      placeholder="Company Name"
+                      value={job.duration}
+                      onChange={(e) => updateExperience(index, 'duration', e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-400 transition-colors duration-200"
+                      placeholder="Jan 2020 - Present"
                     />
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-slate-600 mb-2">Position</label>
-                    <input
-                      type="text"
-                      value={job.position}
-                      onChange={(e) => updateExperience(index, 'position', e.target.value)}
-                      className="w-full p-3 border border-slate-200 rounded-lg shadow-sm focus:ring-2 focus:ring-sky-500 focus:border-transparent transition duration-200"
-                      placeholder="Job Title"
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Description</label>
+                    <textarea
+                      value={job.description}
+                      onChange={(e) => updateExperience(index, 'description', e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-400 h-28 resize-none transition-colors duration-200"
+                      placeholder="Describe your responsibilities and achievements..."
                     />
                   </div>
                 </div>
-                
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-slate-600 mb-2">Date</label>
-                  <input
-                    type="text"
-                    value={job.duration}
-                    onChange={(e) => updateExperience(index, 'duration', e.target.value)}
-                    className="w-full p-3 border border-slate-200 rounded-lg shadow-sm focus:ring-2 focus:ring-sky-500 focus:border-transparent transition duration-200"
-                    placeholder="Jan 2020 - Present"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-slate-600 mb-2">Description</label>
-                  <textarea
-                    value={job.description}
-                    onChange={(e) => updateExperience(index, 'description', e.target.value)}
-                    className="w-full p-3 border border-slate-200 rounded-lg shadow-sm focus:ring-2 focus:ring-sky-500 focus:border-transparent h-32 resize-none transition duration-200"
-                    placeholder="Describe your responsibilities and achievements..."
-                  />
-                </div>
-              </div>
-            ))}
-            
-            <button
-              type="button"
-              onClick={addExperience}
-              className="w-full py-3 border-2 border-dashed border-slate-300 rounded-lg text-slate-500 hover:border-sky-400 hover:text-sky-600 hover:bg-sky-50 transition-colors duration-200 flex items-center justify-center"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              Add Experience
-            </button>
+              ))
+            )}
           </div>
         );
 
       case 'education':
         return (
-          <div className="space-y-8 animate-fade-in">
-            {data.education.map((edu, index) => (
-              <div key={index} className="p-5 border border-slate-200 rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow duration-300">
-                <div className="flex justify-between items-start mb-4">
-                  <h3 className="text-lg font-medium text-slate-700">Education #{index + 1}</h3>
-                  <button
-                    type="button"
-                    onClick={() => removeEducation(index)}
-                    className="text-rose-500 hover:bg-rose-50 p-1.5 rounded-full transition-colors duration-200"
-                    aria-label="Remove education"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </button>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-600 mb-2">Institution</label>
+          <div className="space-y-6 animate-fade-in">
+            {data.education.length === 0 ? (
+              <div className="text-center py-10 bg-slate-50 rounded-lg border border-slate-100 border-dashed">
+                <GraduationCap size={30} className="mx-auto text-slate-300 mb-3" />
+                <p className="text-slate-600 font-medium">No education added yet</p>
+                <p className="text-slate-400 text-sm mt-1 max-w-md mx-auto">Add your educational background to highlight your academic qualifications.</p>
+                <button
+                  type="button"
+                  onClick={addEducation}
+                  className="mt-4 inline-flex items-center px-4 py-2 bg-sky-50 border border-sky-100 rounded-md text-sky-600 hover:bg-sky-100 transition-colors duration-200"
+                >
+                  <Plus size={16} className="mr-1.5" />
+                  Add Education
+                </button>
+              </div>
+            ) : (
+              data.education.map((edu, index) => (
+                <div key={index} className="p-5 border border-slate-200 rounded-lg bg-white shadow-sm hover:shadow transition-all duration-200">
+                  <div className="flex justify-between items-start mb-4">
+                    <h3 className="text-base font-medium text-slate-800 flex items-center">
+                      <GraduationCap size={15} className="mr-2 text-sky-500" />
+                      <span>Education #{index + 1}</span>
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={() => removeEducation(index)}
+                      className="text-slate-400 hover:text-rose-500 p-1 rounded-full hover:bg-slate-100 transition-all duration-200"
+                      aria-label="Remove education"
+                    >
+                      <Minus size={15} />
+                    </button>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1.5 flex items-center">
+                        <GraduationCap size={13} className="mr-1.5 text-slate-400" />
+                        Institution
+                      </label>
+                      <input
+                        type="text"
+                        value={edu.institution}
+                        onChange={(e) => updateEducation(index, 'institution', e.target.value)}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-400 transition-colors duration-200"
+                        placeholder="University or School Name"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1.5">Degree</label>
+                      <input
+                        type="text"
+                        value={edu.degree}
+                        onChange={(e) => updateEducation(index, 'degree', e.target.value)}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-400 transition-colors duration-200"
+                        placeholder="Bachelor of Science, Certification, etc."
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Date</label>
                     <input
                       type="text"
-                      value={edu.institution}
-                      onChange={(e) => updateEducation(index, 'institution', e.target.value)}
-                      className="w-full p-3 border border-slate-200 rounded-lg shadow-sm focus:ring-2 focus:ring-sky-500 focus:border-transparent transition duration-200"
-                      placeholder="University Name"
+                      value={edu.duration}
+                      onChange={(e) => updateEducation(index, 'duration', e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-400 transition-colors duration-200"
+                      placeholder="2016 - 2020"
                     />
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-slate-600 mb-2">Degree</label>
-                    <input
-                      type="text"
-                      value={edu.degree}
-                      onChange={(e) => updateEducation(index, 'degree', e.target.value)}
-                      className="w-full p-3 border border-slate-200 rounded-lg shadow-sm focus:ring-2 focus:ring-sky-500 focus:border-transparent transition duration-200"
-                      placeholder="Bachelor of Science"
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Description</label>
+                    <textarea
+                      value={edu.description}
+                      onChange={(e) => updateEducation(index, 'description', e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-400 h-28 resize-none transition-colors duration-200"
+                      placeholder="Describe your studies, achievements, GPA, etc."
                     />
                   </div>
                 </div>
-                
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-slate-600 mb-2">Date</label>
-                  <input
-                    type="text"
-                    value={edu.duration}
-                    onChange={(e) => updateEducation(index, 'duration', e.target.value)}
-                    className="w-full p-3 border border-slate-200 rounded-lg shadow-sm focus:ring-2 focus:ring-sky-500 focus:border-transparent transition duration-200"
-                    placeholder="2016 - 2020"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-slate-600 mb-2">Description</label>
-                  <textarea
-                    value={edu.description}
-                    onChange={(e) => updateEducation(index, 'description', e.target.value)}
-                    className="w-full p-3 border border-slate-200 rounded-lg shadow-sm focus:ring-2 focus:ring-sky-500 focus:border-transparent h-32 resize-none transition duration-200"
-                    placeholder="Describe your achievements, courses, etc..."
-                  />
-                </div>
-              </div>
-            ))}
-            
-            <button
-              type="button"
-              onClick={addEducation}
-              className="w-full py-3 border-2 border-dashed border-slate-300 rounded-lg text-slate-500 hover:border-sky-400 hover:text-sky-600 hover:bg-sky-50 transition-colors duration-200 flex items-center justify-center"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              Add Education
-            </button>
+              ))
+            )}
           </div>
         );
 
       case 'skills':
         return (
-          <div className="space-y-5 animate-fade-in">
-            <div>
-              <label className="block text-sm font-medium text-slate-600 mb-2">Skills (separate with commas)</label>
-              <textarea
-                value={data.skills.join(', ')}
-                onChange={(e) => {
-                  const skillsArray = e.target.value.split(',').map(skill => skill.trim()).filter(Boolean);
-                  onChange({
-                    ...data,
-                    skills: skillsArray,
-                  });
-                }}
-                className="w-full p-3 border border-slate-200 rounded-lg shadow-sm focus:ring-2 focus:ring-sky-500 focus:border-transparent h-32 resize-none transition duration-200"
-                placeholder="JavaScript, React, TypeScript, Node.js, HTML, CSS"
-              />
-            </div>
-            
-            <div className="mt-3 flex flex-wrap gap-2">
-              {data.skills.map((skill, index) => (
-                <span key={index} className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-sky-100 text-sky-800">
-                  {skill}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const newSkills = [...data.skills];
-                      newSkills.splice(index, 1);
-                      onChange({
-                        ...data,
-                        skills: newSkills,
-                      });
-                    }}
-                    className="ml-1.5 text-sky-500 hover:text-sky-700"
-                    aria-label="Remove skill"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </span>
-              ))}
-            </div>
+          <div className="animate-fade-in">
+            {data.skills.length === 0 ? (
+              <div className="text-center py-10 bg-slate-50 rounded-lg border border-slate-100 border-dashed">
+                <Award size={30} className="mx-auto text-slate-300 mb-3" />
+                <p className="text-slate-600 font-medium">No skills added yet</p>
+                <p className="text-slate-400 text-sm mt-1 max-w-md mx-auto">Add your key skills to showcase your expertise and strengths to potential employers.</p>
+                <div className="mt-4 max-w-md mx-auto">
+                  <div className="flex">
+                    <input
+                      type="text"
+                      id="newSkill"
+                      placeholder="e.g. JavaScript, Project Management, etc."
+                      className="flex-grow px-3 py-2 border border-slate-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-400 transition-colors duration-200"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          const input = e.target as HTMLInputElement;
+                          if (input.value.trim()) {
+                            addSkill();
+                            updateSkill(data.skills.length, input.value.trim());
+                            input.value = '';
+                          }
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const input = document.getElementById('newSkill') as HTMLInputElement;
+                        if (input.value.trim()) {
+                          addSkill();
+                          updateSkill(data.skills.length, input.value.trim());
+                          input.value = '';
+                        }
+                      }}
+                      className="px-4 py-2 bg-sky-500 text-white rounded-r-md hover:bg-sky-600 transition-colors duration-200"
+                    >
+                      <Plus size={16} />
+                    </button>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1.5 text-left">Press Enter after typing to add a skill</p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex flex-wrap gap-2.5 p-4 bg-slate-50 rounded-md border border-slate-100">
+                  {data.skills.length > 0 ? (
+                    data.skills.map((skill, index) => (
+                      <div
+                        key={index}
+                        className="inline-flex items-center bg-white px-3 py-1.5 rounded-md border border-slate-200 shadow-sm hover:shadow transition-all duration-200 group"
+                      >
+                        <span className="text-slate-700 text-sm font-medium mr-2">{skill}</span>
+                        <button
+                          type="button"
+                          onClick={() => removeSkill(index)}
+                          className="text-slate-400 hover:text-rose-500 transition-colors"
+                          aria-label="Remove skill"
+                        >
+                          <Minus size={14} />
+                        </button>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-slate-400 text-sm py-2">Add your first skill below</p>
+                  )}
+                </div>
+
+                <div className="pt-2">
+                  <label className="block text-sm font-medium text-slate-700 mb-2 flex items-center">
+                    <Plus size={14} className="mr-1.5 text-sky-500" />
+                    Add a New Skill
+                  </label>
+                  <div className="flex shadow-sm">
+                    <input
+                      type="text"
+                      id="newSkill"
+                      placeholder="e.g. JavaScript, Project Management, etc."
+                      className="flex-grow px-3 py-2 border border-slate-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-400 transition-colors duration-200"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          const input = e.target as HTMLInputElement;
+                          if (input.value.trim()) {
+                            addSkill();
+                            updateSkill(data.skills.length, input.value.trim());
+                            input.value = '';
+                          }
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const input = document.getElementById('newSkill') as HTMLInputElement;
+                        if (input.value.trim()) {
+                          addSkill();
+                          updateSkill(data.skills.length, input.value.trim());
+                          input.value = '';
+                        }
+                      }}
+                      className="px-4 py-2 bg-sky-500 text-white rounded-r-md hover:bg-sky-600 transition-colors duration-200"
+                    >
+                      <Plus size={16} />
+                    </button>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1.5">Press Enter after typing to add a skill</p>
+                </div>
+              </div>
+            )}
           </div>
         );
-
+      
       default:
         return null;
     }
   };
 
+  // Section tabs navigation
+  const handleTabClick = (sectionId: string) => {
+    setActiveTab(sectionId);
+    setActiveSection(sectionId);
+  };
+
   return (
-    <div className="bg-white rounded-xl p-6 shadow-sm divide-y divide-slate-100">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-medium text-slate-700">Resume Information</h2>
+    <div className="space-y-5">
+      <div className="flex justify-between items-center border-b border-slate-200 pb-3">
+        <h2 className="text-lg font-semibold text-slate-800">Resume Information</h2>
         <button
           onClick={onImportLinkedIn}
-          className="flex items-center gap-1.5 text-sm text-slate-600 hover:text-sky-600 transition-colors"
+          className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md text-sky-600 bg-sky-50 hover:bg-sky-100 transition-colors border border-sky-100"
         >
-          <Linkedin size={16} /> Import from LinkedIn
+          <Linkedin size={14} /> Import from LinkedIn
         </button>
       </div>
       
-      <div className="py-4">
-        <h3 className="flex items-center gap-2 text-slate-700 mb-4">
-          {sectionConfigs['personalInfo'].icon}
-          <span>{sectionConfigs['personalInfo'].title}</span>
-        </h3>
+      {/* Enhanced Section tabs */}
+      <div className="flex overflow-x-auto no-scrollbar border-b border-slate-100 mb-6">
+        {sectionOrder.map((sectionId) => (
+          <button
+            key={sectionId}
+            className={`mr-8 py-2 px-1 transition-all duration-200 relative ${
+              activeTab === sectionId 
+                ? 'text-sky-600' 
+                : 'text-slate-500 hover:text-slate-700'
+            }`}
+            onClick={() => handleTabClick(sectionId)}
+          >
+            <span className="flex items-center gap-2 whitespace-nowrap">
+              {sectionConfigs[sectionId].icon}
+              <span className="text-xs font-medium">
+                {sectionId === 'personalInfo' ? 'Personal' : 
+                 sectionId === 'experience' ? 'Experience' : 
+                 sectionId === 'education' ? 'Education' : 'Skills'}
+              </span>
+            </span>
+            {activeTab === sectionId && (
+              <span className="absolute bottom-0 left-0 w-full h-0.5 bg-sky-500 rounded-t-full" />
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Active section content */}
+      <div className="p-5 bg-white rounded-lg border border-slate-200 shadow-sm">
+        {/* Section title with collapsible toggle */}
+        <div
+          className="flex justify-between items-center border-b border-slate-200 pb-3 mb-5 cursor-pointer group"
+          onClick={() => setActiveSection(activeSection === activeTab ? '' : activeTab)}
+        >
+          <h3 className="flex items-center gap-2 text-slate-800 font-medium">
+            {sectionConfigs[activeTab].icon}
+            <span>{sectionConfigs[activeTab].title}</span>
+          </h3>
+          <div className="flex items-center h-6 w-6 justify-center rounded-full bg-slate-50 group-hover:bg-slate-100 transition-colors">
+            {activeSection === activeTab ? (
+              <ChevronDown size={16} className="text-slate-500" />
+            ) : (
+              <ChevronRight size={16} className="text-slate-500" />
+            )}
+          </div>
+        </div>
         
-        {showTips && (
-          <div className="bg-sky-50 text-sky-800 p-3 rounded-lg mb-4 text-sm">
-            <p>{sectionConfigs['personalInfo'].tip}</p>
+        {/* Section tips */}
+        {showTips && activeSection === activeTab && (
+          <div className="bg-sky-50 border border-sky-100 text-sky-800 p-3 rounded-md mb-5 text-xs flex items-start">
+            <Info size={14} className="text-sky-500 mt-0.5 mr-2 flex-shrink-0" />
+            <p>{sectionConfigs[activeTab].tip}</p>
           </div>
         )}
         
-        {renderSectionContent('personalInfo')}
-      </div>
-      
-      {sectionOrder.filter(s => s !== 'personalInfo').map((sectionId) => {
-        const section = sectionConfigs[sectionId];
-        if (!section) return null;
+        {/* Section content */}
+        <div className={activeSection === activeTab ? 'block' : 'hidden'}>
+          {renderSectionContent(activeTab)}
+        </div>
         
-        const isActive = activeSection === sectionId;
-        
-        return (
-          <div key={sectionId} className="py-4">
-            <div
-              className="flex justify-between items-center gap-2 mb-4 cursor-pointer"
-              onClick={() => setActiveSection(isActive ? '' : sectionId)}
+        {/* Add new item button for sections that support it */}
+        {activeSection === activeTab && activeTab !== 'personalInfo' && (
+          <div className="mt-6 flex justify-center">
+            <button
+              type="button"
+              onClick={() => {
+                if (activeTab === 'experience') addExperience();
+                if (activeTab === 'education') addEducation();
+                if (activeTab === 'skills') addSkill();
+              }}
+              className="inline-flex items-center px-5 py-2.5 bg-sky-50 border border-sky-100 rounded-md text-sky-600 hover:bg-sky-100 transition-all duration-200 shadow-sm hover:shadow font-medium"
             >
-              <h3 className="flex items-center gap-2 text-slate-700">
-                {section.icon}
-                <span>{section.title}</span>
-              </h3>
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    moveSectionUp(sectionId);
-                  }}
-                  disabled={sectionOrder.indexOf(sectionId) <= 1}
-                  className={`p-1 rounded-md ${
-                    sectionOrder.indexOf(sectionId) <= 1
-                      ? 'text-slate-300 cursor-not-allowed'
-                      : 'text-slate-500 hover:bg-slate-100'
-                  }`}
-                >
-                  <ArrowUp size={16} />
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    moveSectionDown(sectionId);
-                  }}
-                  disabled={sectionOrder.indexOf(sectionId) >= sectionOrder.length - 1}
-                  className={`p-1 rounded-md ${
-                    sectionOrder.indexOf(sectionId) >= sectionOrder.length - 1
-                      ? 'text-slate-300 cursor-not-allowed'
-                      : 'text-slate-500 hover:bg-slate-100'
-                  }`}
-                >
-                  <ArrowDown size={16} />
-                </button>
-              </div>
-            </div>
-            
-            {showTips && (
-              <div className={`bg-sky-50 text-sky-800 p-3 rounded-lg mb-4 text-sm ${isActive ? 'block' : 'hidden'}`}>
-                <p>{section.tip}</p>
-              </div>
-            )}
-            
-            <div className={isActive ? 'block' : 'hidden'}>
-              {renderSectionContent(sectionId)}
-            </div>
+              <Plus size={16} className="mr-1.5" />
+              Add {activeTab === 'experience' ? 'Work Experience' : 
+                   activeTab === 'education' ? 'Education' : 'Skill'}
+            </button>
           </div>
-        );
-      })}
+        )}
+      </div>
+
+      {/* Custom CSS for hiding scrollbars is included in global styles */}
     </div>
   );
 };
