@@ -8,18 +8,20 @@ import ResumeAnalytics from './components/ResumeAnalytics';
 import { Auth } from './components/Auth';
 import { useNotification } from './components/Notification';
 import { ResumeData, StyleOptions } from './types';
-import { Download, Save, Upload, HelpCircle, BarChart, ChevronDown, LogOut, User, Database, Clock } from 'lucide-react';
+import { Download, Save, Upload, HelpCircle, BarChart, ChevronDown, LogOut, User, Database, Clock, Settings } from 'lucide-react';
 import { usePDF } from 'react-to-pdf';
 import { sampleResumeData, templateSamples } from './layouts/sampleData';
 import DragAndDropList from './components/DragAndDropList';
 import { 
-  authenticateUser, 
+  loginUser, 
   registerUser, 
   saveUserData, 
+  updateUserData,
   getUserData,
   loginWithGoogle,
-  GoogleUserData,
-} from './utils/userStorage';
+  logoutUser
+} from './utils/api';
+import { GoogleUserData } from './utils/userStorage';
 
 const initialResumeData: ResumeData = {
   personalInfo: {
@@ -94,37 +96,46 @@ function App() {
   });
   const { showNotification, NotificationComponent } = useNotification();
   const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
+  const [settingsDropdownOpen, setSettingsDropdownOpen] = useState(false);
 
   // Check if user is already logged in from a previous session
   useEffect(() => {
-    const savedUser = localStorage.getItem('current_user');
-    if (savedUser) {
-      const userData = JSON.parse(savedUser);
-      
-      // Load user profile data along with saved resume
-      const { 
-        resumeData: savedResumeData, 
-        styleOptions: savedStyleOptions,
-        displayName,
-        photoURL,
-        email
-      } = getUserData(userData.username);
+    const savedUserJSON = localStorage.getItem('current_user');
+    if (savedUserJSON) {
+      const savedUser = JSON.parse(savedUserJSON);
       
       setUser({
-        username: userData.username,
+        username: savedUser.username,
         isAuthenticated: true,
-        displayName,
-        photoURL,
-        email
+        displayName: savedUser.displayName,
+        photoURL: savedUser.photoURL,
+        email: savedUser.email
       });
       
-      if (savedResumeData) {
-        setResumeData(savedResumeData);
-      }
+      // Fetch user's resume data from API
+      const fetchData = async () => {
+        try {
+          const data = await getUserData();
+          if (data) {
+            if (data.resumeData) {
+              setResumeData(data.resumeData);
+            }
+            
+            if (data.styleOptions) {
+              setStyleOptions(data.styleOptions);
+            }
+            
+            if (data.lastSaved) {
+              setLastSaved(new Date(data.lastSaved));
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching user data:', error);
+          showNotification('Failed to load your resume data', 'error');
+        }
+      };
       
-      if (savedStyleOptions) {
-        setStyleOptions(savedStyleOptions);
-      }
+      fetchData();
     } else {
       // Not logged in, show auth modal
       setShowAuthModal(true);
@@ -137,17 +148,22 @@ function App() {
     
     // Only auto-save if user is authenticated, auto-save is enabled, and there have been edits
     if (user.isAuthenticated && autoSaveEnabled && isEditing) {
-      autoSaveTimer = window.setTimeout(() => {
-        saveUserData(user.username, resumeData, styleOptions);
-        setLastSaved(new Date());
-        
-        // Show notification only for the first auto-save after enabling
-        const lastAutoSaveNotified = localStorage.getItem('last_autosave_notified');
-        const now = new Date().getTime();
-        
-        if (!lastAutoSaveNotified || (now - parseInt(lastAutoSaveNotified)) > (5 * 60 * 1000)) {
-          showNotification('Auto-save is active. Your changes will be saved automatically.', 'success');
-          localStorage.setItem('last_autosave_notified', now.toString());
+      autoSaveTimer = window.setTimeout(async () => {
+        try {
+          // Use PATCH method for auto-save operations
+          await updateUserData(resumeData, styleOptions);
+          setLastSaved(new Date());
+          
+          // Show notification only for the first auto-save after enabling
+          const lastAutoSaveNotified = localStorage.getItem('last_autosave_notified');
+          const now = new Date().getTime();
+          
+          if (!lastAutoSaveNotified || (now - parseInt(lastAutoSaveNotified)) > (5 * 60 * 1000)) {
+            showNotification('Auto-save is active. Your changes will be saved automatically.', 'success');
+            localStorage.setItem('last_autosave_notified', now.toString());
+          }
+        } catch (error) {
+          console.error('Auto-save failed:', error);
         }
       }, 60000); // Auto-save every minute
     }
@@ -157,7 +173,7 @@ function App() {
         window.clearTimeout(autoSaveTimer);
       }
     };
-  }, [resumeData, styleOptions, user.isAuthenticated, autoSaveEnabled, isEditing, user.username]);
+  }, [resumeData, styleOptions, user.isAuthenticated, autoSaveEnabled, isEditing]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -205,54 +221,59 @@ function App() {
     setIsEditing(false);
   };
 
-  const saveResume = () => {
-    // Always prepare data for download
-    const data = {
-      resumeData,
-      styleOptions,
-    };
-    
-    // If user is authenticated, save to their profile first
-    if (user.isAuthenticated) {
-      saveUserData(user.username, resumeData, styleOptions);
-      setLastSaved(new Date());
-      showNotification('Your resume has been saved to your account and downloaded!');
-    } else {
-      showNotification('Your resume has been downloaded as a file.');
+  const saveResume = async () => {
+    try {
+      // If user is authenticated, save to their profile first
+      if (user.isAuthenticated) {
+        await saveUserData(resumeData, styleOptions);
+        setLastSaved(new Date());
+        showNotification('Your resume has been saved to your account and downloaded!');
+      } else {
+        showNotification('Your resume has been downloaded as a file.');
+      }
+      
+      // Always download the file
+      const data = { resumeData, styleOptions };
+      const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = resumeData.personalInfo.name 
+        ? `resume_${resumeData.personalInfo.name.toLowerCase().replace(/\s+/g, '_')}.json` 
+        : 'my-resume.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error saving resume:', error);
+      showNotification('Failed to save your resume', 'error');
     }
-    
-    // Always download the file
-    const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = resumeData.personalInfo.name 
-      ? `resume_${resumeData.personalInfo.name.toLowerCase().replace(/\s+/g, '_')}.json` 
-      : 'my-resume.json';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
   };
 
   // Function to save data for consistency without download
-  const saveData = () => {
+  const saveData = async () => {
     if (user.isAuthenticated) {
-      // Save to user's profile
-      saveUserData(user.username, resumeData, styleOptions);
-      
-      // Update last saved timestamp
-      setLastSaved(new Date());
-      
-      // Show a more detailed notification
-      if (resumeData.personalInfo.name) {
-        showNotification(`Resume for ${resumeData.personalInfo.name} saved successfully!`);
-      } else {
-        showNotification('Your resume data has been saved to your account!');
+      try {
+        // Save to user's profile
+        await saveUserData(resumeData, styleOptions);
+        
+        // Update last saved timestamp
+        setLastSaved(new Date());
+        
+        // Show a more detailed notification
+        if (resumeData.personalInfo.name) {
+          showNotification(`Resume for ${resumeData.personalInfo.name} saved successfully!`);
+        } else {
+          showNotification('Your resume data has been saved to your account!');
+        }
+        
+        // Set editing state to track changes
+        setIsEditing(true);
+      } catch (error) {
+        console.error('Error saving data:', error);
+        showNotification('Failed to save your data', 'error');
       }
-      
-      // Set editing state to track changes
-      setIsEditing(true);
     } else {
       showNotification('Please log in to save your data', 'error');
       setShowAuthModal(true);
@@ -296,112 +317,121 @@ function App() {
     }
   };
 
-  const handleLogin = (username: string) => {
-    // Get user data including profile info
-    const { 
-      resumeData: savedResumeData, 
-      styleOptions: savedStyleOptions,
-      displayName,
-      photoURL,
-      email 
-    } = getUserData(username);
-    
-    setUser({
-      username,
-      isAuthenticated: true,
-      displayName,
-      photoURL,
-      email
-    });
-    
-    // Save current user to localStorage
-    localStorage.setItem('current_user', JSON.stringify({ username }));
-    
-    if (savedResumeData) {
-      setResumeData(savedResumeData);
-    }
-    
-    if (savedStyleOptions) {
-      setStyleOptions(savedStyleOptions);
-    }
-    
-    setShowAuthModal(false);
-  };
-
-  const handleSignup = (username: string, password: string, email: string) => {
-    const success = registerUser(username, password, email);
-    
-    if (success) {
+  const handleLogin = async (username: string, password: string) => {
+    try {
+      const userData = await loginUser(username, password);
+      
       setUser({
-        username,
+        username: userData.username,
         isAuthenticated: true,
-        email
+        displayName: userData.displayName,
+        photoURL: userData.photoURL,
+        email: userData.email
       });
       
-      // Save current user to localStorage
-      localStorage.setItem('current_user', JSON.stringify({ username }));
+      // Fetch the user's resume data
+      try {
+        const data = await getUserData();
+        if (data) {
+          if (data.resumeData) {
+            setResumeData(data.resumeData);
+          }
+          
+          if (data.styleOptions) {
+            setStyleOptions(data.styleOptions);
+          }
+          
+          if (data.lastSaved) {
+            setLastSaved(new Date(data.lastSaved));
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching resume data:', error);
+      }
+      
+      setShowAuthModal(false);
+      showNotification(`Welcome, ${userData.displayName || userData.username}!`);
+    } catch (error) {
+      console.error('Login error:', error);
+      showNotification('Invalid username or password', 'error');
+    }
+  };
+
+  const handleSignup = async (username: string, password: string, email: string) => {
+    try {
+      const userData = await registerUser(username, email, password);
+      
+      setUser({
+        username: userData.username,
+        isAuthenticated: true,
+        email: userData.email,
+        displayName: userData.displayName
+      });
       
       setShowAuthModal(false);
       showNotification('Account created successfully!');
-    } else {
-      showNotification('Username already taken. Please choose another one.', 'error');
+    } catch (error) {
+      console.error('Registration error:', error);
+      showNotification('Username may already be taken. Please try another one.', 'error');
     }
   };
 
-  const handleGoogleSignIn = (googleData: GoogleUserData) => {
-    const result = loginWithGoogle(googleData);
-    
-    if (result.success && result.username) {
-      // Get the full user data after Google sign-in
-      const { 
-        displayName, 
-        photoURL, 
-        email,
-        resumeData: savedResumeData,
-        styleOptions: savedStyleOptions
-      } = getUserData(result.username);
-      
-      setUser({
-        username: result.username,
-        isAuthenticated: true,
-        displayName: displayName || googleData.displayName,
-        photoURL: photoURL || googleData.photoURL,
-        email: email || googleData.email
-      });
-      
-      // Save current user to localStorage
-      localStorage.setItem('current_user', JSON.stringify({ 
-        username: result.username,
+  const handleGoogleSignIn = async (googleData: GoogleUserData) => {
+    try {
+      const userData = await loginWithGoogle({
+        email: googleData.email,
         displayName: googleData.displayName,
         photoURL: googleData.photoURL
-      }));
+      });
       
-      // If the user has saved data, load it
-      if (savedResumeData) {
-        setResumeData(savedResumeData);
-      }
+      setUser({
+        username: userData.username,
+        isAuthenticated: true,
+        displayName: userData.displayName || googleData.displayName,
+        photoURL: userData.photoURL || googleData.photoURL,
+        email: userData.email || googleData.email
+      });
       
-      if (savedStyleOptions) {
-        setStyleOptions(savedStyleOptions);
+      // Fetch the user's resume data
+      try {
+        const data = await getUserData();
+        if (data) {
+          if (data.resumeData) {
+            setResumeData(data.resumeData);
+          }
+          
+          if (data.styleOptions) {
+            setStyleOptions(data.styleOptions);
+          }
+          
+          if (data.lastSaved) {
+            setLastSaved(new Date(data.lastSaved));
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching resume data:', error);
       }
       
       setShowAuthModal(false);
-      showNotification(`Welcome, ${googleData.displayName || googleData.email}!`);
-    } else {
+      showNotification(`Welcome, ${userData.displayName || userData.email}!`);
+    } catch (error) {
+      console.error('Google sign-in error:', error);
       showNotification('Failed to sign in with Google. Please try again.', 'error');
     }
   };
 
   const handleLogout = () => {
+    logoutUser();
+    
     setUser({
       username: '',
       isAuthenticated: false
     });
     
-    localStorage.removeItem('current_user');
     setResumeData(initialResumeData);
     setStyleOptions(initialStyleOptions);
     setShowAuthModal(true);
+    showNotification('You have been logged out');
   };
 
   const exportAsDocx = () => {
@@ -456,9 +486,15 @@ function App() {
       const diffMin = Math.floor(diffMs / (1000 * 60));
       
       if (diffMin >= 2) {
-        saveUserData(user.username, data, styleOptions);
-        setLastSaved(now);
-        showNotification('Changes auto-saved');
+        // Use PATCH method for auto-save operations
+        updateUserData(data, styleOptions)
+          .then(() => {
+            setLastSaved(now);
+            showNotification('Changes auto-saved');
+          })
+          .catch(error => {
+            console.error('Auto-save failed:', error);
+          });
       }
     }
   };
@@ -484,146 +520,198 @@ function App() {
           <h1 className="text-3xl font-extralight text-slate-800 tracking-tight">
             <span className="text-sky-500 font-normal">Resume</span> Builder
           </h1>
-          <div className="flex flex-wrap gap-2 items-center">
+          
+          {/* User profile and controls section - simplified layout */}
+          <div className="flex flex-wrap items-center gap-3">
+            {/* User profile - more minimal */}
             {user.isAuthenticated && (
-              <div className="flex items-center text-slate-600 mr-4">
+              <div className="flex items-center text-slate-600 mr-2 px-2 py-1 rounded-md hover:bg-slate-50">
                 {user.photoURL ? (
                   <img 
                     src={user.photoURL} 
                     alt={user.displayName || user.username} 
-                    className="h-8 w-8 rounded-full mr-2 border border-sky-200"
+                    className="h-7 w-7 rounded-full mr-2"
                   />
                 ) : (
-                  <div className="h-8 w-8 rounded-full bg-sky-100 flex items-center justify-center mr-2">
-                    <User className="h-4 w-4 text-sky-500" />
-                  </div>
+                  <User className="h-5 w-5 text-sky-500 mr-2" />
                 )}
-                <span className="font-medium">
+                <span className="text-sm font-medium">
                   {user.displayName || user.username}
                 </span>
+                {autoSaveEnabled && lastSaved && (
+                  <span className="ml-2 text-xs text-slate-400 hidden md:inline-block">
+                    <Clock size={12} className="inline mr-1" />
+                    {formatLastSaved(lastSaved)}
+                  </span>
+                )}
               </div>
             )}
-            <button
-              onClick={() => setShowTips(!showTips)}
-              className="flex items-center gap-1.5 bg-white text-slate-600 px-3 py-2 rounded-lg border border-slate-200 hover:border-sky-200 hover:text-sky-600 hover:shadow-sm transition-all duration-200"
-            >
-              <HelpCircle size={16} />
-              {showTips ? 'Hide Tips' : 'Show Tips'}
-            </button>
-            <button
-              onClick={handleClearForm}
-              className="flex items-center gap-1.5 bg-white text-slate-600 px-3 py-2 rounded-lg border border-slate-200 hover:border-sky-200 hover:text-sky-600 hover:shadow-sm transition-all duration-200"
-            >
-              Clear Form
-            </button>
-            <div className="relative">
+            
+            {/* Core action buttons - simplified */}
+            <div className="flex gap-2">
+              {/* Document dropdown with Import/Export options */}
+              <div className="relative">
+                <button
+                  id="file-dropdown-button"
+                  onClick={() => setExportDropdownOpen(!exportDropdownOpen)}
+                  className="flex items-center gap-1.5 bg-white text-slate-700 px-3 py-2 rounded-lg border border-slate-200 hover:border-sky-200 hover:text-sky-600 hover:shadow-sm transition-all duration-200"
+                  aria-haspopup="true"
+                  aria-expanded={exportDropdownOpen}
+                >
+                  <Download size={16} />
+                  <span className="hidden sm:inline">Document</span> <ChevronDown size={12} className={`transition-transform duration-200 ${exportDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {exportDropdownOpen && (
+                  <div 
+                    id="export-dropdown"
+                    className="absolute right-0 mt-2 w-52 bg-white rounded-lg shadow-lg border border-slate-100 z-10 animate-fade-in"
+                  >
+                    <div className="py-1 border-b border-slate-100">
+                      <div className="px-3 py-1 text-xs font-semibold text-slate-500">Export</div>
+                      <ul className="py-1" role="menu">
+                        <li role="menuitem">
+                          <button
+                            onClick={() => {
+                              toPDF();
+                              setExportDropdownOpen(false);
+                            }}
+                            className="block px-4 py-2 text-sm text-slate-600 hover:text-sky-600 hover:bg-sky-50 w-full text-left transition-colors duration-150"
+                          >
+                            Export as PDF
+                          </button>
+                        </li>
+                        <li role="menuitem">
+                          <button
+                            onClick={() => {
+                              exportAsPlainText();
+                              setExportDropdownOpen(false);
+                            }}
+                            className="block px-4 py-2 text-sm text-slate-600 hover:text-sky-600 hover:bg-sky-50 w-full text-left transition-colors duration-150"
+                          >
+                            Export as Plain Text
+                          </button>
+                        </li>
+                      </ul>
+                    </div>
+                    <div className="py-1">
+                      <div className="px-3 py-1 text-xs font-semibold text-slate-500">Import</div>
+                      <ul className="py-1" role="menu">
+                        <li role="menuitem">
+                          <label className="block px-4 py-2 text-sm text-slate-600 hover:text-sky-600 hover:bg-sky-50 w-full text-left transition-colors duration-150 cursor-pointer">
+                            Import from File
+                            <input
+                              type="file"
+                              onChange={loadResume}
+                              className="hidden"
+                              accept=".json"
+                            />
+                          </label>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              {/* Primary action buttons */}
               <button
-                id="export-dropdown-button"
-                onClick={() => setExportDropdownOpen(!exportDropdownOpen)}
-                className="flex items-center gap-1.5 bg-white text-slate-600 px-3 py-2 rounded-lg border border-slate-200 hover:border-sky-200 hover:text-sky-600 hover:shadow-sm transition-all duration-200"
-                aria-haspopup="true"
-                aria-expanded={exportDropdownOpen}
+                onClick={saveResume}
+                className="flex items-center gap-1.5 bg-sky-500 text-white px-3 py-2 rounded-lg hover:bg-sky-600 transition-all duration-200"
               >
-                <Download size={16} />
-                Export <ChevronDown size={12} className={`transition-transform duration-200 ${exportDropdownOpen ? 'rotate-180' : ''}`} />
+                <Save size={16} />
+                <span className="hidden sm:inline">Save</span>
               </button>
-              {exportDropdownOpen && (
-                <div 
-                  id="export-dropdown"
-                  className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-slate-100 z-10 animate-fade-in"
+              
+              {/* Settings dropdown */}
+              <div className="relative">
+                <button
+                  id="settings-dropdown-button"
+                  onClick={() => setSettingsDropdownOpen(!settingsDropdownOpen)}
+                  className="flex items-center gap-1.5 bg-white text-slate-700 px-3 py-2 rounded-lg border border-slate-200 hover:border-sky-200 hover:text-sky-600 hover:shadow-sm transition-all duration-200"
+                  aria-haspopup="true"
+                  aria-expanded={settingsDropdownOpen}
                 >
-                  <ul className="py-1" role="menu">
-                    <li role="menuitem">
-                      <button
-                        onClick={() => {
-                          toPDF();
-                          setExportDropdownOpen(false);
-                        }}
-                        className="block px-4 py-2 text-sm text-slate-600 hover:text-sky-600 hover:bg-sky-50 w-full text-left transition-colors duration-150"
-                      >
-                        Export as PDF
-                      </button>
-                    </li>
-                    <li role="menuitem">
-                      <button
-                        onClick={() => {
-                          exportAsDocx();
-                          setExportDropdownOpen(false);
-                        }}
-                        className="block px-4 py-2 text-sm text-slate-600 hover:text-sky-600 hover:bg-sky-50 w-full text-left transition-colors duration-150"
-                      >
-                        Export as DOCX
-                      </button>
-                    </li>
-                    <li role="menuitem">
-                      <button
-                        onClick={() => {
-                          exportAsPlainText();
-                          setExportDropdownOpen(false);
-                        }}
-                        className="block px-4 py-2 text-sm text-slate-600 hover:text-sky-600 hover:bg-sky-50 w-full text-left transition-colors duration-150"
-                      >
-                        Export as Plain Text
-                      </button>
-                    </li>
-                  </ul>
-                </div>
-              )}
+                  <Settings size={16} />
+                  <ChevronDown size={12} className={`transition-transform duration-200 ${settingsDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {settingsDropdownOpen && (
+                  <div 
+                    id="settings-dropdown"
+                    className="absolute right-0 mt-2 w-52 bg-white rounded-lg shadow-lg border border-slate-100 z-10 animate-fade-in"
+                  >
+                    <ul className="py-1" role="menu">
+                      <li role="menuitem">
+                        <button
+                          onClick={() => {
+                            const newState = !autoSaveEnabled;
+                            setAutoSaveEnabled(newState);
+                            if (newState) {
+                              showNotification('Auto-save enabled', 'success');
+                            } else {
+                              showNotification('Auto-save disabled', 'error');
+                            }
+                            setSettingsDropdownOpen(false);
+                          }}
+                          className="flex items-center justify-between px-4 py-2 text-sm text-slate-600 hover:text-sky-600 hover:bg-sky-50 w-full text-left transition-colors duration-150"
+                        >
+                          <span>Auto-Save</span>
+                          <div className={`w-8 h-4 rounded-full ${autoSaveEnabled ? 'bg-sky-400' : 'bg-slate-300'} relative`}>
+                            <div 
+                              className={`absolute top-0.5 h-3 w-3 rounded-full bg-white transform transition-transform ${
+                                autoSaveEnabled ? 'translate-x-4' : 'translate-x-0.5'
+                              }`} 
+                            />
+                          </div>
+                        </button>
+                      </li>
+                      <li role="menuitem">
+                        <button
+                          onClick={() => {
+                            setShowTips(!showTips);
+                            setSettingsDropdownOpen(false);
+                          }}
+                          className="flex items-center justify-between px-4 py-2 text-sm text-slate-600 hover:text-sky-600 hover:bg-sky-50 w-full text-left transition-colors duration-150"
+                        >
+                          <span>Show Tips</span>
+                          <div className={`w-8 h-4 rounded-full ${showTips ? 'bg-sky-400' : 'bg-slate-300'} relative`}>
+                            <div 
+                              className={`absolute top-0.5 h-3 w-3 rounded-full bg-white transform transition-transform ${
+                                showTips ? 'translate-x-4' : 'translate-x-0.5'
+                              }`} 
+                            />
+                          </div>
+                        </button>
+                      </li>
+                      <li role="menuitem">
+                        <button
+                          onClick={() => {
+                            handleClearForm();
+                            setSettingsDropdownOpen(false);
+                          }}
+                          className="block px-4 py-2 text-sm text-slate-600 hover:text-sky-600 hover:bg-sky-50 w-full text-left transition-colors duration-150"
+                        >
+                          Clear Form
+                        </button>
+                      </li>
+                      {user.isAuthenticated && (
+                        <li role="menuitem">
+                          <button
+                            onClick={() => {
+                              handleLogout();
+                              setSettingsDropdownOpen(false);
+                            }}
+                            className="block px-4 py-2 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 w-full text-left transition-colors duration-150"
+                          >
+                            <LogOut size={16} className="inline mr-1" />
+                            Logout
+                          </button>
+                        </li>
+                      )}
+                    </ul>
+                  </div>
+                )}
+              </div>
             </div>
-            
-            <label
-              className="flex items-center gap-1.5 bg-white text-slate-600 px-3 py-2 rounded-lg border border-slate-200 hover:border-sky-200 hover:text-sky-600 hover:shadow-sm transition-all duration-200 cursor-pointer"
-            >
-              <Upload size={16} />
-              Import
-              <input
-                type="file"
-                onChange={loadResume}
-                className="hidden"
-                accept=".json"
-              />
-            </label>
-            
-            <button
-              onClick={saveResume}
-              className="flex items-center gap-1.5 bg-sky-500 text-white px-3 py-2 rounded-lg hover:bg-sky-600 transition-all duration-200"
-            >
-              <Save size={16} />
-              Save & Download
-            </button>
-            
-            {user.isAuthenticated && (
-              <>
-                <button
-                  onClick={() => {
-                    const newState = !autoSaveEnabled;
-                    setAutoSaveEnabled(newState);
-                    if (newState) {
-                      showNotification('Auto-save enabled. Your changes will be saved automatically.', 'success');
-                    } else {
-                      showNotification('Auto-save disabled. Remember to save your work manually.', 'error');
-                    }
-                  }}
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border transition-colors duration-200 ${
-                    autoSaveEnabled 
-                      ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100' 
-                      : 'bg-white text-slate-600 border-slate-200 hover:border-sky-200 hover:text-sky-600'
-                  }`}
-                  title={autoSaveEnabled ? "Auto-save is on. Your work is saved automatically every minute." : "Auto-save is off. Remember to save manually."}
-                >
-                  <Clock size={16} />
-                  {autoSaveEnabled ? 'Auto-Save On' : 'Auto-Save Off'}
-                </button>
-                
-                <button
-                  onClick={handleLogout}
-                  className="flex items-center gap-1.5 bg-white text-slate-600 px-3 py-2 rounded-lg border border-slate-200 hover:border-red-200 hover:text-red-600 hover:shadow-sm transition-all duration-200 ml-2"
-                >
-                  <LogOut size={16} />
-                  Logout
-                </button>
-              </>
-            )}
           </div>
         </div>
 
@@ -635,36 +723,25 @@ function App() {
           </div>
         )}
 
-        {user.isAuthenticated && (
-          <div className="mb-4 text-sm text-slate-500 flex items-center justify-end">
-            <Clock size={14} className="mr-1" />
-            <span>
-              {autoSaveEnabled ? (
-                <>
-                  {lastSaved ? `Auto-save enabled · Last saved: ${formatLastSaved(lastSaved)}` : 'Auto-save enabled · No changes saved yet'}
-                </>
-              ) : (
-                <>
-                  Auto-save disabled {lastSaved && `· Last saved: ${formatLastSaved(lastSaved)}`}
-                </>
-              )}
-            </span>
-          </div>
-        )}
-
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div className="space-y-8">
-            <ResumeForm 
-              data={resumeData} 
-              onChange={handleResumeChange} 
-              showTips={showTips}
-              onImportLinkedIn={importFromLinkedIn}
-            />
-            <StyleControls options={styleOptions} onChange={setStyleOptions} />
+          <div className="space-y-6">
+            <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+              <ResumeForm 
+                data={resumeData} 
+                onChange={handleResumeChange} 
+                showTips={showTips}
+                onImportLinkedIn={importFromLinkedIn}
+              />
+            </div>
+            <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-5">
+              <StyleControls options={styleOptions} onChange={setStyleOptions} />
+            </div>
           </div>
           
-          <div className="sticky top-8" ref={targetRef}>
-            <ResumePreview data={resumeData} styleOptions={styleOptions} />
+          <div className="sticky top-8">
+            <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-5" ref={targetRef}>
+              <ResumePreview data={resumeData} styleOptions={styleOptions} />
+            </div>
           </div>
         </div>
       </div>

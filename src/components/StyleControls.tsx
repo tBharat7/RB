@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleOptions } from '../types';
+import { Palette, Type, Text } from 'lucide-react';
 
 interface StyleControlsProps {
   options: StyleOptions;
@@ -26,24 +27,31 @@ export const StyleControls: React.FC<StyleControlsProps> = ({ options, onChange 
   };
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition-shadow duration-300">
-      <h2 className="text-xl font-extralight text-slate-700 mb-6">Appearance Settings</h2>
+    <div>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-base font-medium text-slate-700">Style</h2>
+        <div className="text-xs text-slate-500">Customize appearance</div>
+      </div>
       
-      <div className="space-y-8">
+      <div className="space-y-5">
+        {/* Color selector */}
         <div>
-          <label className="block text-sm font-medium text-slate-600 mb-4">Primary Color</label>
-          <div className="flex flex-wrap gap-3">
+          <div className="flex items-center gap-2 mb-3">
+            <Palette size={14} className="text-slate-500" />
+            <label className="text-xs font-medium text-slate-600">Color</label>
+          </div>
+          <div className="flex flex-wrap gap-2">
             {colorPalette.map((color) => (
               <button
                 key={color.value}
-                className={`w-9 h-9 rounded-full transition-all duration-200 ${
+                className={`w-7 h-7 rounded-full transition-all duration-200 ${
                   options.primaryColor === color.value 
-                    ? 'ring-2 ring-offset-2 ring-slate-300 scale-110' 
+                    ? 'ring-2 ring-offset-2' 
                     : 'hover:scale-110'
                 }`}
                 style={{ 
                   backgroundColor: color.value,
-                  boxShadow: options.primaryColor === color.value ? `0 0 0 2px white, 0 0 0 4px ${color.value}` : 'none'
+                  boxShadow: options.primaryColor === color.value ? `0 0 0 1px white, 0 0 0 2px ${color.value}` : 'none'
                 }}
                 onClick={() => handleChange('primaryColor', color.value)}
                 title={color.name}
@@ -52,74 +60,82 @@ export const StyleControls: React.FC<StyleControlsProps> = ({ options, onChange 
           </div>
         </div>
 
+        {/* Font Family selector */}
         <div>
-          <label className="block text-sm font-medium text-slate-600 mb-4">Font Family</label>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="flex items-center gap-2 mb-3">
+            <Type size={14} className="text-slate-500" />
+            <label className="text-xs font-medium text-slate-600">Font</label>
+          </div>
+          <div className="flex gap-2">
             <button
-              className={`px-4 py-3 border text-sm rounded-lg transition-all duration-200 ${
+              className={`px-3 py-1.5 text-xs rounded-md transition-all duration-200 ${
                 options.fontFamily === 'sans'
-                  ? 'bg-sky-50 border-sky-200 text-sky-800 shadow-sm'
-                  : 'border-slate-200 text-slate-600 hover:border-sky-200 hover:text-sky-600'
+                  ? 'bg-slate-100 text-slate-800 font-medium'
+                  : 'text-slate-600 hover:bg-slate-50'
               }`}
               onClick={() => handleChange('fontFamily', 'sans')}
             >
-              <span className="font-sans">Sans Serif</span>
+              <span className="font-sans">Sans</span>
             </button>
             <button
-              className={`px-4 py-3 border text-sm rounded-lg transition-all duration-200 ${
+              className={`px-3 py-1.5 text-xs rounded-md transition-all duration-200 ${
                 options.fontFamily === 'serif'
-                  ? 'bg-sky-50 border-sky-200 text-sky-800 shadow-sm'
-                  : 'border-slate-200 text-slate-600 hover:border-sky-200 hover:text-sky-600'
+                  ? 'bg-slate-100 text-slate-800 font-medium'
+                  : 'text-slate-600 hover:bg-slate-50'
               }`}
               onClick={() => handleChange('fontFamily', 'serif')}
             >
               <span className="font-serif">Serif</span>
             </button>
             <button
-              className={`px-4 py-3 border text-sm rounded-lg transition-all duration-200 ${
+              className={`px-3 py-1.5 text-xs rounded-md transition-all duration-200 ${
                 options.fontFamily === 'mono'
-                  ? 'bg-sky-50 border-sky-200 text-sky-800 shadow-sm'
-                  : 'border-slate-200 text-slate-600 hover:border-sky-200 hover:text-sky-600'
+                  ? 'bg-slate-100 text-slate-800 font-medium'
+                  : 'text-slate-600 hover:bg-slate-50'
               }`}
               onClick={() => handleChange('fontFamily', 'mono')}
             >
-              <span className="font-mono">Monospace</span>
+              <span className="font-mono">Mono</span>
             </button>
           </div>
         </div>
 
+        {/* Font Size selector */}
         <div>
-          <label className="block text-sm font-medium text-slate-600 mb-4">Font Size</label>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="flex items-center gap-2 mb-3">
+            <Text size={14} className="text-slate-500" />
+            <label className="text-xs font-medium text-slate-600">Size</label>
+          </div>
+          <div className="flex gap-2">
             <button
-              className={`px-4 py-3 border text-sm rounded-lg transition-all duration-200 ${
+              className={`px-3 py-1.5 text-xs rounded-md transition-all duration-200 ${
                 options.fontSize === 'sm'
-                  ? 'bg-sky-50 border-sky-200 text-sky-800 shadow-sm'
-                  : 'border-slate-200 text-slate-600 hover:border-sky-200 hover:text-sky-600'
+                  ? 'bg-slate-100 text-slate-800 font-medium'
+                  : 'text-slate-600 hover:bg-slate-50'
               }`}
               onClick={() => handleChange('fontSize', 'sm')}
             >
-              <span className="text-sm">Small</span>
+              Small
             </button>
             <button
-              className={`px-4 py-3 border text-sm rounded-lg transition-all duration-200 ${
+              className={`px-3 py-1.5 text-xs rounded-md transition-all duration-200 ${
                 options.fontSize === 'base'
-                  ? 'bg-sky-50 border-sky-200 text-sky-800 shadow-sm'
-                  : 'border-slate-200 text-slate-600 hover:border-sky-200 hover:text-sky-600'
+                  ? 'bg-slate-100 text-slate-800 font-medium'
+                  : 'text-slate-600 hover:bg-slate-50'
               }`}
               onClick={() => handleChange('fontSize', 'base')}
             >
-              <span className="text-base">Medium</span>
+              Medium
             </button>
             <button
-              className={`px-4 py-3 border text-sm rounded-lg transition-all duration-200 ${
+              className={`px-3 py-1.5 text-xs rounded-md transition-all duration-200 ${
                 options.fontSize === 'lg'
-                  ? 'bg-sky-50 border-sky-200 text-sky-800 shadow-sm'
-                  : 'border-slate-200 text-slate-600 hover:border-sky-200 hover:text-sky-600'
+                  ? 'bg-slate-100 text-slate-800 font-medium'
+                  : 'text-slate-600 hover:bg-slate-50'
               }`}
               onClick={() => handleChange('fontSize', 'lg')}
             >
-              <span className="text-lg">Large</span>
+              Large
             </button>
           </div>
         </div>

@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { authenticateUser } from '../utils/userStorage';
 import { AtSign, Lock, User, LogIn } from 'lucide-react';
 
 interface User {
@@ -16,7 +15,7 @@ interface GoogleAuthResponse {
 }
 
 interface AuthProps {
-  onLogin: (username: string) => void;
+  onLogin: (username: string, password: string) => void;
   onSignup: (username: string, password: string, email: string) => void;
   onGoogleSignIn: (userData: GoogleAuthResponse) => void;
 }
@@ -64,42 +63,50 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onSignup, onGoogleSignIn })
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setIsAuthenticating(true);
 
-    if (isLogin) {
-      // Login validation
-      if (!username || !password) {
-        setError('Please fill in all fields');
-        return;
-      }
+    try {
+      if (isLogin) {
+        // Login validation
+        if (!username || !password) {
+          setError('Please fill in all fields');
+          setIsAuthenticating(false);
+          return;
+        }
 
-      // Validate credentials
-      if (authenticateUser(username, password)) {
-        onLogin(username);
+        // Call the login function with username and password
+        await onLogin(username, password);
       } else {
-        setError('Invalid username or password');
-      }
-    } else {
-      // Signup validation
-      if (!username || !email || !password) {
-        setError('Please fill in all fields');
-        return;
-      }
+        // Signup validation
+        if (!username || !email || !password) {
+          setError('Please fill in all fields');
+          setIsAuthenticating(false);
+          return;
+        }
 
-      if (!validateEmail(email)) {
-        setEmailError('Please enter a valid email address');
-        return;
-      }
+        if (!validateEmail(email)) {
+          setEmailError('Please enter a valid email address');
+          setIsAuthenticating(false);
+          return;
+        }
 
-      if (!validatePassword(password)) {
-        setPasswordError('Password must be at least 8 characters with 1 uppercase letter, 1 lowercase letter, and 1 number');
-        return;
-      }
+        if (!validatePassword(password)) {
+          setPasswordError('Password must be at least 8 characters with 1 uppercase letter, 1 lowercase letter, and 1 number');
+          setIsAuthenticating(false);
+          return;
+        }
 
-      // Register new user
-      onSignup(username, password, email);
+        // Register new user
+        await onSignup(username, password, email);
+      }
+    } catch (error) {
+      setError('Authentication failed. Please check your credentials.');
+      console.error('Auth error:', error);
+    } finally {
+      setIsAuthenticating(false);
     }
   };
 
