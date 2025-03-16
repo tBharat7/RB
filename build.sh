@@ -10,6 +10,10 @@ npm install
 
 # Build the frontend
 echo "Building the application..."
-npm run build
+echo "Node.js version: $(node -v)"
+echo "NPM version: $(npm -v)"
+
+# Use npx to run vite directly
+npx vite build
 
 echo "Build completed successfully!" 
