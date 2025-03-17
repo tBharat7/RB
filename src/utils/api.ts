@@ -2,10 +2,32 @@ import axios, { InternalAxiosRequestConfig } from 'axios';
 import { ResumeData, StyleOptions } from '../types';
 import { GoogleUserData } from './userStorage';
 
-// Update API base URL to use correct port
-const API_BASE_URL = window.location.hostname === 'localhost' 
-  ? 'http://localhost:5000/api' 
-  : '/api';
+// API base URL configuration for different environments
+const API_BASE_URL = (() => {
+  const hostname = window.location.hostname;
+  
+  // Local development
+  if (hostname === 'localhost') {
+    return 'http://localhost:5000/api';
+  }
+  
+  // Koyeb deployment
+  if (hostname.includes('koyeb.app')) {
+    // If frontend and backend are deployed together (same domain)
+    return '/api';
+  }
+  
+  // If backend is on a separate domain/service
+  if (hostname.includes('netlify.app') || 
+      hostname.includes('vercel.app') || 
+      hostname.includes('github.io')) {
+    // Replace with your actual Koyeb backend URL
+    return 'https://your-app-name.koyeb.app/api';
+  }
+  
+  // Custom domain
+  return '/api'; // Fallback to relative path
+})();
 
 // Create Axios instance
 const api = axios.create({

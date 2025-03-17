@@ -10,14 +10,30 @@ import { protect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-// Authentication routes with names matching frontend expectations
-router.route('/signup').post(registerUser);  // Changed from /create
-router.post('/signin', authUser);            // Changed from /session
-router.post('/social', googleAuth);          // Kept as is
+// Authentication routes with explicit method handling
+router.route('/signup')
+  .post(registerUser)
+  .all((req, res) => {
+    res.status(405).json({ message: `Method ${req.method} not allowed on this endpoint` });
+  });
 
-router
-  .route('/profile')
+router.route('/signin')
+  .post(authUser)
+  .all((req, res) => {
+    res.status(405).json({ message: `Method ${req.method} not allowed on this endpoint` });
+  });
+
+router.route('/social')
+  .post(googleAuth)
+  .all((req, res) => {
+    res.status(405).json({ message: `Method ${req.method} not allowed on this endpoint` });
+  });
+
+router.route('/profile')
   .get(protect, getUserProfile)
-  .put(protect, updateUserProfile);
+  .put(protect, updateUserProfile)
+  .all((req, res) => {
+    res.status(405).json({ message: `Method ${req.method} not allowed on this endpoint` });
+  });
 
 export default router; 

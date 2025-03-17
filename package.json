@@ -9,12 +9,12 @@
   },
   "scripts": {
     "dev": "vite",
-    "server": "node server/server.js",
-    "dev:full": "concurrently \"npm run server\" \"npm run dev\"",
-    "build": "npx vite build",
-    "start": "node server/server.js",
-    "lint": "eslint .",
+    "build": "vite build",
     "preview": "vite preview",
+    "server": "node server/server.js",
+    "start": "node server/server.js",
+    "dev:full": "concurrently \"npm run server\" \"npm run dev\"",
+    "lint": "eslint .",
     "predeploy": "npm run build && touch dist/.nojekyll",
     "deploy": "gh-pages -d dist"
   },

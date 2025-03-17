@@ -35,14 +35,47 @@ const app = express();
 // Middleware
 app.use(express.json());
 
-// CORS configuration - simplified for local development
+// CORS configuration with support for Koyeb deployment
 const corsOptions = {
-  origin: 'http://localhost:5173',
+  origin: function(origin, callback) {
+    // Allowed origins
+    const allowedOrigins = [
+      // Local development
+      'http://localhost:5173',
+      'http://localhost:3000',
+      
+      // Koyeb deployment domains
+      'https://your-app-name.koyeb.app',
+
+      // Other deployment URLs
+      'https://your-frontend.netlify.app',
+      'https://your-frontend.vercel.app'
+    ];
+    
+    // Allow requests with no origin (like mobile apps, curl requests, same-origin requests)
+    if (!origin || origin === '') return callback(null, true);
+    
+    // In production, log all origins to debug CORS issues
+    if (process.env.NODE_ENV === 'production') {
+      console.log('Request origin:', origin);
+    }
+    
+    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
+      callback(null, true);
+    } else {
+      console.log('CORS blocked request from:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 };
+
 app.use(cors(corsOptions));
+
+// Add OPTIONS handling for preflight requests
+app.options('*', cors(corsOptions));
 
 // Health check endpoint
 app.get('/health', (req, res) => {
