@@ -5,11 +5,27 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import connectDB from './config/db.js';
 import userRoutes from './routes/userRoutes.js';
+import authRoutes from './routes/authRoutes.js';
 import resumeRoutes from './routes/resumeRoutes.js';
 import { notFound, errorHandler } from './middleware/errorMiddleware.js';
 
 // Load environment variables
-dotenv.config();
+dotenv.config({ path: path.resolve('./server/.env') });
+
+// Only use mock database if explicitly set in .env
+// Remove automatic enabling of mock mode
+console.log('Environment loaded:', {
+  NODE_ENV: process.env.NODE_ENV,
+  PORT: process.env.PORT,
+  MONGO_URI: process.env.MONGO_URI ? '[REDACTED]' : 'undefined',
+  MOCK_DB: process.env.MOCK_DB
+});
+
+// Ensure MongoDB URI is set - prefer Atlas over local
+if (!process.env.MONGO_URI) {
+  console.log('MongoDB URI not found in environment, using Atlas URI');
+  process.env.MONGO_URI = 'mongodb+srv://btadaboinalm:iamgroot@cluster0.180jv.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
+}
 
 // Connect to MongoDB
 connectDB();
@@ -19,11 +35,9 @@ const app = express();
 // Middleware
 app.use(express.json());
 
-// CORS configuration - using a more permissive config for Render
+// CORS configuration - simplified for local development
 const corsOptions = {
-  origin: process.env.NODE_ENV === 'production' 
-    ? '*' // Allow all origins for now - will tighten this up later
-    : 'http://localhost:5173',
+  origin: 'http://localhost:5173',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -41,6 +55,7 @@ app.get('/health', (req, res) => {
 
 // API Routes
 app.use('/api/users', userRoutes);
+app.use('/api/auth', authRoutes);
 app.use('/api/resumes', resumeRoutes);
 
 // Get the directory path
@@ -48,18 +63,20 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
 
-// Serve static assets in production
+// Serve static assets if in production mode
 if (process.env.NODE_ENV === 'production') {
+  console.log('Running in production mode - serving static assets from dist folder');
   // Set static folder
   app.use(express.static(path.join(rootDir, 'dist')));
 
-  // Any route that is not an API route
+  // Any route that is not an API route serves the index.html
   app.get('*', (req, res) => {
     res.sendFile(path.resolve(rootDir, 'dist', 'index.html'));
   });
 } else {
+  console.log('Running in development mode - API only');
   app.get('/', (req, res) => {
-    res.send('API is running...');
+    res.send('Resume Builder API is running. Frontend should be served separately in development.');
   });
 }
 
@@ -67,7 +84,8 @@ if (process.env.NODE_ENV === 'production') {
 app.use(notFound);
 app.use(errorHandler);
 
-const PORT = process.env.PORT || 5000;
+// Define port and override from env if needed
+const PORT = 5000; // Using port 5000 as requested
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);

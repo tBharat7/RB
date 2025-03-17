@@ -23,6 +23,10 @@ import {
 } from './utils/api';
 import { GoogleUserData } from './utils/userStorage';
 
+const API_BASE_URL = window.location.hostname === 'localhost' 
+  ? 'http://localhost:5000/api' 
+  : '/api'; // In production, use relative path
+
 const initialResumeData: ResumeData = {
   personalInfo: {
     name: '',
@@ -394,11 +398,7 @@ function App() {
 
   const handleGoogleSignIn = async (googleData: GoogleUserData) => {
     try {
-      const userData = await loginWithGoogle({
-        email: googleData.email,
-        displayName: googleData.displayName,
-        photoURL: googleData.photoURL
-      });
+      const userData = await loginWithGoogle(googleData);
       
       setUser({
         username: userData.username,
