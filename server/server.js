@@ -63,7 +63,10 @@ const corsOptions = {
 
       // Other deployment URLs
       'https://resume-builder-bharat.netlify.app',
-      'https://resume-builder-bharat.vercel.app'
+      'https://resume-builder-bharat.vercel.app',
+      
+      // GitHub Pages
+      'https://tbharat7.github.io'
     ];
     
     // Allow requests with no origin (like mobile apps, curl requests, same-origin requests)
@@ -77,7 +80,7 @@ const corsOptions = {
     // For production, check if origin matches a pattern
     if (process.env.NODE_ENV === 'production') {
       // Allow all Koyeb domains
-      if (origin && origin.includes('koyeb.app')) {
+      if (origin && (origin.includes('koyeb.app') || origin.includes('github.io'))) {
         return callback(null, true);
       }
     }
@@ -91,13 +94,28 @@ const corsOptions = {
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 };
 
+// Apply CORS middleware
 app.use(cors(corsOptions));
 
-// Add OPTIONS handling for preflight requests
-app.options('*', cors(corsOptions));
+// Add explicit OPTIONS handler for preflight requests
+app.options('*', (req, res) => {
+  const origin = req.headers.origin;
+  
+  // Log all preflight requests in production for debugging
+  if (process.env.NODE_ENV === 'production') {
+    console.log('Preflight request from:', origin);
+  }
+  
+  // Set CORS headers for preflight response
+  res.header('Access-Control-Allow-Origin', origin);
+  res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,PATCH,OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.status(204).end();
+});
 
 // Health check endpoint - special routes for Koyeb health checks
 app.get('/health', (req, res) => {

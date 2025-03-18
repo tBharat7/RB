@@ -18,10 +18,15 @@ const API_BASE_URL = (() => {
     return '/api';
   }
   
+  // GitHub Pages deployment
+  if (hostname.includes('github.io')) {
+    console.log('Using GitHub Pages frontend with Koyeb backend');
+    return 'https://resume-builder-bharat.koyeb.app/api';
+  }
+  
   // If backend is on a separate domain/service
   if (hostname.includes('netlify.app') || 
-      hostname.includes('vercel.app') || 
-      hostname.includes('github.io')) {
+      hostname.includes('vercel.app')) {
     // Using port 5000 for Koyeb backend
     console.log('Using Koyeb backend from external domain');
     return 'https://resume-builder-bharat.koyeb.app/api';
