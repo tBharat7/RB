@@ -22,7 +22,7 @@ const API_BASE_URL = (() => {
   if (hostname.includes('netlify.app') || 
       hostname.includes('vercel.app') || 
       hostname.includes('github.io')) {
-    // Use port 8000 explicitly for Koyeb backend
+    // Using port 5000 for Koyeb backend
     console.log('Using Koyeb backend from external domain');
     return 'https://resume-builder-bharat.koyeb.app/api';
   }

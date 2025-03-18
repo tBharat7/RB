@@ -5,13 +5,13 @@ services:
       type: nano
     routes:
       - path: /
-        port: 8000
+        port: 5000
     ports:
-      - port: 8000
+      - port: 5000
         protocol: http
     healthchecks:
       - type: http
-        port: 8000
+        port: 5000
         path: /health
         initial_delay: 30s
         interval: 15s
@@ -30,7 +30,7 @@ services:
       - name: NODE_ENV
         value: production
       - name: PORT
-        value: "8000"
+        value: "5000"
       - name: JWT_SECRET
         value: "koyeb_deployment_jwt_secret_change_in_production"
       - name: MONGO_URI
