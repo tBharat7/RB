@@ -13,6 +13,7 @@ const API_BASE_URL = (() => {
   
   // Koyeb deployment
   if (hostname.includes('koyeb.app')) {
+    console.log('Using Koyeb deployment API URL - Using relative path since frontend and backend are served from same domain');
     // If frontend and backend are deployed together (same domain)
     return '/api';
   }
@@ -21,8 +22,9 @@ const API_BASE_URL = (() => {
   if (hostname.includes('netlify.app') || 
       hostname.includes('vercel.app') || 
       hostname.includes('github.io')) {
-    // Replace with your actual Koyeb backend URL
-    return 'https://your-app-name.koyeb.app/api';
+    // Use port 8000 explicitly for Koyeb backend
+    console.log('Using Koyeb backend from external domain');
+    return 'https://resume-builder-bharat.koyeb.app/api';
   }
   
   // Custom domain

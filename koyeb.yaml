@@ -1,0 +1,37 @@
+name: resume-builder
+services:
+  - name: backend
+    instance:
+      type: nano
+    routes:
+      - path: /
+        port: 8000
+    ports:
+      - port: 8000
+        protocol: http
+    healthchecks:
+      - type: http
+        port: 8000
+        path: /health
+        initial_delay: 30s
+        interval: 15s
+        timeout: 5s
+        success_threshold: 1
+        failure_threshold: 3
+    build:
+      builder: paketo
+      buildpacks:
+        - paketo-buildpacks/nodejs
+      context: "."
+      dockerfile: auto
+    env:
+      - name: KOYEB_ENVIRONMENT
+        value: "true"
+      - name: NODE_ENV
+        value: production
+      - name: PORT
+        value: "8000"
+      - name: JWT_SECRET
+        value: "koyeb_deployment_jwt_secret_change_in_production"
+      - name: MONGO_URI
+        secret: MONGO_URI 

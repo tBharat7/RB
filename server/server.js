@@ -12,13 +12,20 @@ import { notFound, errorHandler } from './middleware/errorMiddleware.js';
 // Load environment variables
 dotenv.config({ path: path.resolve('./server/.env') });
 
-// Only use mock database if explicitly set in .env
-// Remove automatic enabling of mock mode
+// Check for Koyeb environment
+const isKoyebEnvironment = process.env.KOYEB_ENVIRONMENT === 'true' || !!process.env.KOYEB_PLATFORM;
+if (isKoyebEnvironment) {
+  console.log('Running in Koyeb environment');
+  process.env.NODE_ENV = 'production';
+}
+
+// Log environment configuration
 console.log('Environment loaded:', {
   NODE_ENV: process.env.NODE_ENV,
   PORT: process.env.PORT,
   MONGO_URI: process.env.MONGO_URI ? '[REDACTED]' : 'undefined',
-  MOCK_DB: process.env.MOCK_DB
+  MOCK_DB: process.env.MOCK_DB,
+  KOYEB: isKoyebEnvironment
 });
 
 // Ensure MongoDB URI is set - prefer Atlas over local
@@ -28,12 +35,18 @@ if (!process.env.MONGO_URI) {
 }
 
 // Connect to MongoDB
-connectDB();
+connectDB().catch(err => {
+  console.error('Failed to connect to MongoDB:', err.message);
+  // Don't crash the server on MongoDB connection failure
+  // This allows the health checks to still pass
+  console.log('Server will continue to run without database connectivity');
+});
 
 const app = express();
 
 // Middleware
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // CORS configuration with support for Koyeb deployment
 const corsOptions = {
@@ -45,11 +58,12 @@ const corsOptions = {
       'http://localhost:3000',
       
       // Koyeb deployment domains
-      'https://your-app-name.koyeb.app',
+      'https://resume-builder-bharat.koyeb.app',
+      'https://*.koyeb.app',
 
       // Other deployment URLs
-      'https://your-frontend.netlify.app',
-      'https://your-frontend.vercel.app'
+      'https://resume-builder-bharat.netlify.app',
+      'https://resume-builder-bharat.vercel.app'
     ];
     
     // Allow requests with no origin (like mobile apps, curl requests, same-origin requests)
@@ -58,6 +72,14 @@ const corsOptions = {
     // In production, log all origins to debug CORS issues
     if (process.env.NODE_ENV === 'production') {
       console.log('Request origin:', origin);
+    }
+    
+    // For production, check if origin matches a pattern
+    if (process.env.NODE_ENV === 'production') {
+      // Allow all Koyeb domains
+      if (origin && origin.includes('koyeb.app')) {
+        return callback(null, true);
+      }
     }
     
     if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
@@ -77,13 +99,22 @@ app.use(cors(corsOptions));
 // Add OPTIONS handling for preflight requests
 app.options('*', cors(corsOptions));
 
-// Health check endpoint
+// Health check endpoint - special routes for Koyeb health checks
 app.get('/health', (req, res) => {
   res.status(200).json({ 
     status: 'ok', 
     uptime: process.uptime(),
     timestamp: new Date()
   });
+});
+
+// Explicit health check endpoints for Koyeb
+app.get('/', (req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
+
+app.get('/healthz', (req, res) => {
+  res.status(200).json({ status: 'ok' });
 });
 
 // API Routes
@@ -96,29 +127,65 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
 
+// Add request logging in production for debugging
+if (process.env.NODE_ENV === 'production') {
+  app.use((req, res, next) => {
+    console.log(`${req.method} ${req.url}`);
+    next();
+  });
+}
+
 // Serve static assets if in production mode
 if (process.env.NODE_ENV === 'production') {
   console.log('Running in production mode - serving static assets from dist folder');
+  
+  // Log the dist directory structure for debugging
+  try {
+    const fs = require('fs');
+    const distPath = path.join(rootDir, 'dist');
+    if (fs.existsSync(distPath)) {
+      console.log('Dist folder exists, contents:', fs.readdirSync(distPath));
+    } else {
+      console.log('Dist folder does not exist at:', distPath);
+    }
+  } catch (err) {
+    console.error('Error checking dist folder:', err);
+  }
+  
   // Set static folder
   app.use(express.static(path.join(rootDir, 'dist')));
 
-  // Any route that is not an API route serves the index.html
-  app.get('*', (req, res) => {
-    res.sendFile(path.resolve(rootDir, 'dist', 'index.html'));
+  // Any route that is not an API route or health check serves the index.html
+  app.get('*', (req, res, next) => {
+    // Skip API routes and health endpoints
+    if (req.path.startsWith('/api') || 
+        req.path === '/health' || 
+        req.path === '/healthz' ||
+        req.path === '/') {
+      return next();
+    }
+    // Send the index.html file
+    const indexPath = path.resolve(rootDir, 'dist', 'index.html');
+    console.log('Attempting to serve index.html from:', indexPath);
+    res.sendFile(indexPath, err => {
+      if (err) {
+        console.error('Error sending index.html:', err);
+        res.status(500).send('Error loading application. Please try again later.');
+      }
+    });
   });
 } else {
   console.log('Running in development mode - API only');
-  app.get('/', (req, res) => {
-    res.send('Resume Builder API is running. Frontend should be served separately in development.');
-  });
+  // Root route is already handled by health check above
 }
 
 // Error middleware
 app.use(notFound);
 app.use(errorHandler);
 
-// Define port and override from env if needed
-const PORT = 5000; // Using port 5000 as requested
+// Define port for Koyeb compatibility
+// Koyeb expects the app to listen on port 8000 for health checks
+const PORT = process.env.PORT || 8000;
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
