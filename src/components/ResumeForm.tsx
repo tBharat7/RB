@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ResumeData } from '../types';
-import { Plus, Minus, Briefcase, GraduationCap, Award, ArrowUp, ArrowDown, Linkedin, Info, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, Minus, Briefcase, GraduationCap, Award, ArrowUp, ArrowDown, Linkedin, Info, ChevronDown, ChevronRight, CheckCircle2, AlertCircle } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable, DroppableProvided, DraggableProvided, DropResult } from 'react-beautiful-dnd';
 
 interface ResumeFormProps {
@@ -8,6 +8,13 @@ interface ResumeFormProps {
   onChange: (data: ResumeData) => void;
   showTips?: boolean;
   onImportLinkedIn?: () => void;
+}
+
+interface FormValidation {
+  [key: string]: {
+    isValid: boolean;
+    message?: string;
+  };
 }
 
 interface SectionConfig {
@@ -54,8 +61,81 @@ export const ResumeForm: React.FC<ResumeFormProps> = ({
   const [sectionOrder, setSectionOrder] = useState(['personalInfo', 'experience', 'education', 'skills']);
   const [activeSection, setActiveSection] = useState<string>('personalInfo');
   const [activeTab, setActiveTab] = useState<string>('personalInfo');
+  const [validation, setValidation] = useState<FormValidation>({});
+  const [completionStatus, setCompletionStatus] = useState({
+    personalInfo: 0,
+    experience: 0,
+    education: 0,
+    skills: 0
+  });
+
+  // Calculate completion status for each section
+  useEffect(() => {
+    // Personal info completion (name and email are required)
+    const personalFields = ['name', 'email', 'title', 'phone', 'location', 'summary'];
+    const requiredPersonalFields = ['name', 'email'];
+    const filledRequiredFields = requiredPersonalFields.filter(field => 
+      data.personalInfo[field as keyof typeof data.personalInfo]?.trim()
+    ).length;
+    const filledOptionalFields = personalFields.filter(field => 
+      data.personalInfo[field as keyof typeof data.personalInfo]?.trim()
+    ).length - filledRequiredFields;
+    
+    const personalCompletion = Math.min(
+      100, 
+      (filledRequiredFields / requiredPersonalFields.length) * 70 + 
+      (filledOptionalFields / (personalFields.length - requiredPersonalFields.length)) * 30
+    );
+
+    // Experience completion
+    const expCompletion = data.experience.length > 0 
+      ? Math.min(100, data.experience.reduce((sum, exp) => {
+          const filledFields = ['company', 'position', 'duration', 'description']
+            .filter(field => exp[field as keyof typeof exp]?.trim()).length;
+          return sum + (filledFields / 4) * 100;
+        }, 0) / data.experience.length)
+      : 0;
+
+    // Education completion
+    const eduCompletion = data.education.length > 0
+      ? Math.min(100, data.education.reduce((sum, edu) => {
+          const filledFields = ['institution', 'degree', 'duration', 'description']
+            .filter(field => edu[field as keyof typeof edu]?.trim()).length;
+          return sum + (filledFields / 4) * 100;
+        }, 0) / data.education.length)
+      : 0;
+
+    // Skills completion
+    const skillsCompletion = data.skills.length > 0 ? 100 : 0;
+
+    setCompletionStatus({
+      personalInfo: Math.round(personalCompletion),
+      experience: Math.round(expCompletion),
+      education: Math.round(eduCompletion),
+      skills: Math.round(skillsCompletion)
+    });
+  }, [data]);
+
+  // Validate form fields
+  const validateField = (field: string, value: string): {isValid: boolean, message?: string} => {
+    if (field === 'email' && value) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return {
+        isValid: emailRegex.test(value),
+        message: emailRegex.test(value) ? undefined : 'Please enter a valid email address'
+      };
+    }
+    return { isValid: true };
+  };
 
   const updatePersonalInfo = (field: string, value: string) => {
+    // Validate the field
+    const validationResult = validateField(field, value);
+    setValidation({
+      ...validation,
+      [field]: validationResult
+    });
+    
     onChange({
       ...data,
       personalInfo: { ...data.personalInfo, [field]: value },
@@ -191,13 +271,31 @@ export const ResumeForm: React.FC<ResumeFormProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">Email</label>
-                <input
-                  type="email"
-                  value={data.personalInfo.email}
-                  onChange={(e) => updatePersonalInfo('email', e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-400 transition-colors duration-200"
-                  placeholder="johndoe@example.com"
-                />
+                <div className="relative">
+                  <input
+                    type="email"
+                    value={data.personalInfo.email}
+                    onChange={(e) => updatePersonalInfo('email', e.target.value)}
+                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 transition-colors duration-200 ${
+                      validation.email?.isValid === false 
+                        ? 'border-rose-300 focus:ring-rose-200 focus:border-rose-400' 
+                        : 'border-slate-300 focus:ring-sky-200 focus:border-sky-400'
+                    }`}
+                    placeholder="johndoe@example.com"
+                    aria-invalid={validation.email?.isValid === false}
+                    aria-describedby={validation.email?.isValid === false ? "email-error" : undefined}
+                  />
+                  {validation.email?.isValid === false && (
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                      <AlertCircle size={16} className="text-rose-500" />
+                    </div>
+                  )}
+                </div>
+                {validation.email?.isValid === false && (
+                  <p id="email-error" className="mt-1 text-xs text-rose-500">
+                    {validation.email.message}
+                  </p>
+                )}
               </div>
               
               <div>
@@ -254,19 +352,19 @@ export const ResumeForm: React.FC<ResumeFormProps> = ({
               </div>
             ) : (
               data.experience.map((job, index) => (
-                <div key={index} className="p-5 border border-slate-200 rounded-lg bg-white shadow-sm hover:shadow transition-all duration-200">
-                  <div className="flex justify-between items-start mb-4">
-                    <h3 className="text-base font-medium text-slate-800 flex items-center">
-                      <Briefcase size={15} className="mr-2 text-sky-500" />
+                <div key={index} className="p-4 border border-slate-100 rounded bg-white hover:shadow-sm transition-all duration-200">
+                  <div className="flex justify-between items-start mb-3">
+                    <h3 className="text-sm text-slate-700 flex items-center">
+                      <Briefcase size={12} className="mr-1.5 text-sky-500" />
                       <span>Position #{index + 1}</span>
                     </h3>
                     <button
                       type="button"
                       onClick={() => removeExperience(index)}
-                      className="text-slate-400 hover:text-rose-500 p-1 rounded-full hover:bg-slate-100 transition-all duration-200"
+                      className="text-slate-400 hover:text-rose-500 p-0.5 rounded-full hover:bg-slate-50 transition-all duration-200"
                       aria-label="Remove experience"
                     >
-                      <Minus size={15} />
+                      <Minus size={12} />
                     </button>
                   </div>
                   
@@ -342,19 +440,19 @@ export const ResumeForm: React.FC<ResumeFormProps> = ({
               </div>
             ) : (
               data.education.map((edu, index) => (
-                <div key={index} className="p-5 border border-slate-200 rounded-lg bg-white shadow-sm hover:shadow transition-all duration-200">
-                  <div className="flex justify-between items-start mb-4">
-                    <h3 className="text-base font-medium text-slate-800 flex items-center">
-                      <GraduationCap size={15} className="mr-2 text-sky-500" />
+                <div key={index} className="p-4 border border-slate-100 rounded bg-white hover:shadow-sm transition-all duration-200">
+                  <div className="flex justify-between items-start mb-3">
+                    <h3 className="text-sm text-slate-700 flex items-center">
+                      <GraduationCap size={12} className="mr-1.5 text-sky-500" />
                       <span>Education #{index + 1}</span>
                     </h3>
                     <button
                       type="button"
                       onClick={() => removeEducation(index)}
-                      className="text-slate-400 hover:text-rose-500 p-1 rounded-full hover:bg-slate-100 transition-all duration-200"
+                      className="text-slate-400 hover:text-rose-500 p-0.5 rounded-full hover:bg-slate-50 transition-all duration-200"
                       aria-label="Remove education"
                     >
-                      <Minus size={15} />
+                      <Minus size={12} />
                     </button>
                   </div>
                   
@@ -463,16 +561,16 @@ export const ResumeForm: React.FC<ResumeFormProps> = ({
                     data.skills.map((skill, index) => (
                       <div
                         key={index}
-                        className="inline-flex items-center bg-white px-3 py-1.5 rounded-md border border-slate-200 shadow-sm hover:shadow transition-all duration-200 group"
+                        className="inline-flex items-center bg-white px-2.5 py-1 rounded border border-slate-100 hover:shadow-sm transition-all duration-200 group"
                       >
-                        <span className="text-slate-700 text-sm font-medium mr-2">{skill}</span>
+                        <span className="text-slate-700 text-xs mr-1.5">{skill}</span>
                         <button
                           type="button"
                           onClick={() => removeSkill(index)}
                           className="text-slate-400 hover:text-rose-500 transition-colors"
                           aria-label="Remove skill"
                         >
-                          <Minus size={14} />
+                          <Minus size={10} />
                         </button>
                       </div>
                     ))
@@ -538,68 +636,103 @@ export const ResumeForm: React.FC<ResumeFormProps> = ({
   };
 
   return (
-    <div className="space-y-5">
-      <div className="flex justify-between items-center border-b border-slate-200 pb-3">
-        <h2 className="text-lg font-semibold text-slate-800">Resume Information</h2>
+    <div className="space-y-4">
+      <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+        <h2 className="text-sm font-medium text-slate-700">Resume Details</h2>
         <button
           onClick={onImportLinkedIn}
-          className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md text-sky-600 bg-sky-50 hover:bg-sky-100 transition-colors border border-sky-100"
+          className="flex items-center gap-1 text-xs px-2 py-1 rounded text-slate-500 hover:text-slate-700 hover:bg-slate-50 transition-colors"
         >
-          <Linkedin size={14} /> Import from LinkedIn
+          <Linkedin size={12} /> Import
         </button>
       </div>
       
-      {/* Enhanced Section tabs */}
-      <div className="flex overflow-x-auto no-scrollbar border-b border-slate-100 mb-6">
-        {sectionOrder.map((sectionId) => (
-          <button
-            key={sectionId}
-            className={`mr-8 py-2 px-1 transition-all duration-200 relative ${
-              activeTab === sectionId 
-                ? 'text-sky-600' 
-                : 'text-slate-500 hover:text-slate-700'
-            }`}
-            onClick={() => handleTabClick(sectionId)}
-          >
-            <span className="flex items-center gap-2 whitespace-nowrap">
-              {sectionConfigs[sectionId].icon}
-              <span className="text-xs font-medium">
-                {sectionId === 'personalInfo' ? 'Personal' : 
-                 sectionId === 'experience' ? 'Experience' : 
-                 sectionId === 'education' ? 'Education' : 'Skills'}
-              </span>
-            </span>
-            {activeTab === sectionId && (
-              <span className="absolute bottom-0 left-0 w-full h-0.5 bg-sky-500 rounded-t-full" />
-            )}
-          </button>
-        ))}
+      {/* Enhanced Section tabs with completion indicators */}
+      <div className="flex mb-4" style={{ overflowX: 'hidden' }}>
+        {sectionOrder.map((sectionId) => {
+          const isComplete = completionStatus[sectionId as keyof typeof completionStatus] === 100;
+          const isPartial = completionStatus[sectionId as keyof typeof completionStatus] > 0 && 
+                           completionStatus[sectionId as keyof typeof completionStatus] < 100;
+          
+          return (
+            <button
+              key={sectionId}
+              className={`mr-4 py-1.5 px-2 transition-all duration-200 relative rounded-md ${
+                activeTab === sectionId 
+                  ? 'bg-slate-50 text-slate-800' 
+                  : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50/50'
+              }`}
+              onClick={() => handleTabClick(sectionId)}
+            >
+              <div className="flex items-center gap-1.5 whitespace-nowrap">
+                <div className="relative">
+                  {sectionConfigs[sectionId].icon}
+                  {isComplete && (
+                    <span className="absolute -right-1 -top-1 w-2 h-2 bg-green-500 rounded-full"></span>
+                  )}
+                  {isPartial && (
+                    <span className="absolute -right-1 -top-1 w-2 h-2 bg-amber-400 rounded-full"></span>
+                  )}
+                </div>
+                <span className="text-xs font-medium">
+                  {sectionId === 'personalInfo' ? 'Personal' : 
+                   sectionId === 'experience' ? 'Experience' : 
+                   sectionId === 'education' ? 'Education' : 'Skills'}
+                </span>
+              </div>
+            </button>
+          );
+        })}
       </div>
 
-      {/* Active section content */}
-      <div className="p-5 bg-white rounded-lg border border-slate-200 shadow-sm">
-        {/* Section title with collapsible toggle */}
+      {/* Active section content with improved UI */}
+      <div className="p-4 bg-slate-50/50 rounded-lg border border-slate-100">
+        {/* Section title with collapsible toggle and completion status */}
         <div
-          className="flex justify-between items-center border-b border-slate-200 pb-3 mb-5 cursor-pointer group"
+          className="flex justify-between items-center mb-4 cursor-pointer group"
           onClick={() => setActiveSection(activeSection === activeTab ? '' : activeTab)}
         >
-          <h3 className="flex items-center gap-2 text-slate-800 font-medium">
-            {sectionConfigs[activeTab].icon}
-            <span>{sectionConfigs[activeTab].title}</span>
-          </h3>
-          <div className="flex items-center h-6 w-6 justify-center rounded-full bg-slate-50 group-hover:bg-slate-100 transition-colors">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 bg-white rounded-md shadow-sm border border-slate-100">
+              {sectionConfigs[activeTab].icon}
+            </div>
+            <div>
+              <h3 className="flex items-center gap-1 text-slate-700 font-medium">
+                {sectionConfigs[activeTab].title}
+              </h3>
+              <div className="flex items-center mt-0.5">
+                <div className="w-24 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full rounded-full transition-all duration-500 ease-out"
+                    style={{ 
+                      width: `${completionStatus[activeTab as keyof typeof completionStatus]}%`,
+                      backgroundColor: completionStatus[activeTab as keyof typeof completionStatus] === 100 
+                        ? '#10b981' // green-500
+                        : completionStatus[activeTab as keyof typeof completionStatus] > 50
+                          ? '#0ea5e9' // sky-500
+                          : '#f59e0b' // amber-500
+                    }}
+                  ></div>
+                </div>
+                <span className="ml-2 text-xs text-slate-500">
+                  {completionStatus[activeTab as keyof typeof completionStatus]}% complete
+                </span>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center justify-center w-6 h-6 rounded-full bg-white border border-slate-100 shadow-sm hover:shadow transition-all">
             {activeSection === activeTab ? (
-              <ChevronDown size={16} className="text-slate-500" />
+              <ChevronDown size={14} className="text-slate-400" />
             ) : (
-              <ChevronRight size={16} className="text-slate-500" />
+              <ChevronRight size={14} className="text-slate-400" />
             )}
           </div>
         </div>
         
-        {/* Section tips */}
+        {/* Enhanced Section tips */}
         {showTips && activeSection === activeTab && (
-          <div className="bg-sky-50 border border-sky-100 text-sky-800 p-3 rounded-md mb-5 text-xs flex items-start">
-            <Info size={14} className="text-sky-500 mt-0.5 mr-2 flex-shrink-0" />
+          <div className="bg-blue-50 text-blue-700 p-3 rounded-md mb-4 text-xs flex items-start border border-blue-100">
+            <Info size={14} className="text-blue-500 mt-0.5 mr-2 flex-shrink-0" />
             <p>{sectionConfigs[activeTab].tip}</p>
           </div>
         )}

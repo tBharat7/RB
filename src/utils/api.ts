@@ -1,82 +1,30 @@
-import axios, { InternalAxiosRequestConfig } from 'axios';
 import { ResumeData, StyleOptions } from '../types';
-import { GoogleUserData } from './userStorage';
-
-// API base URL configuration for different environments
-const API_BASE_URL = (() => {
-  const hostname = window.location.hostname;
-  
-  // Local development
-  if (hostname === 'localhost') {
-    return 'http://localhost:5000/api';
-  }
-  
-  // Koyeb deployment
-  if (hostname.includes('koyeb.app')) {
-    console.log('Using Koyeb deployment API URL - Using relative path since frontend and backend are served from same domain');
-    // If frontend and backend are deployed together (same domain)
-    return '/api';
-  }
-  
-  // GitHub Pages deployment
-  if (hostname.includes('github.io')) {
-    console.log('Using GitHub Pages frontend with Koyeb backend');
-    return 'https://resume-builder-bharat.koyeb.app/api';
-  }
-  
-  // If backend is on a separate domain/service
-  if (hostname.includes('netlify.app') || 
-      hostname.includes('vercel.app')) {
-    // Using port 5000 for Koyeb backend
-    console.log('Using Koyeb backend from external domain');
-    return 'https://resume-builder-bharat.koyeb.app/api';
-  }
-  
-  // Custom domain
-  return '/api'; // Fallback to relative path
-})();
-
-// Create Axios instance
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Interceptor to add auth token to requests
-api.interceptors.request.use(
-  (config: InternalAxiosRequestConfig) => {
-    const userInfo = localStorage.getItem('current_user');
-    if (userInfo) {
-      const user = JSON.parse(userInfo);
-      if (user.token) {
-        config.headers.Authorization = `Bearer ${user.token}`;
-      }
-    }
-    return config;
-  },
-  (error: any) => {
-    return Promise.reject(error);
-  }
-);
+import { 
+  GoogleUserData, 
+  authenticateUser, 
+  registerUser as registerLocalUser, 
+  loginWithGoogle as loginWithGoogleLocal, 
+  saveUserData as saveLocalUserData, 
+  getUserData as getLocalUserData
+} from './userStorage';
 
 // User API functions
 export const loginUser = async (email: string, password: string) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/auth/signin`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ email, password }),
-    });
+    // Use local storage for authentication
+    const isAuthenticated = authenticateUser(email, password);
     
-    if (!response.ok) {
-      throw new Error(`Authentication failed: ${response.status}`);
+    if (!isAuthenticated) {
+      throw new Error('Authentication failed: Invalid credentials');
     }
     
-    const userData = await response.json();
+    // Create a user object similar to what the API would return
+    const userData = {
+      username: email,
+      email: email,
+      displayName: email.split('@')[0], // Simple display name from email
+      token: `local-storage-token-${Date.now()}` // Dummy token
+    };
     
     localStorage.setItem('current_user', JSON.stringify(userData));
     
@@ -89,19 +37,20 @@ export const loginUser = async (email: string, password: string) => {
 
 export const registerUser = async (name: string, email: string, password: string) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/auth/signup`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ name, email, password }),
-    });
+    // Use local storage for registration
+    const success = registerLocalUser(email, password, email);
     
-    if (!response.ok) {
-      throw new Error(`Registration failed: ${response.status}`);
+    if (!success) {
+      throw new Error('Registration failed: User may already exist');
     }
     
-    const userData = await response.json();
+    // Create a user object similar to what the API would return
+    const userData = {
+      username: email,
+      email: email,
+      displayName: name || email.split('@')[0],
+      token: `local-storage-token-${Date.now()}` // Dummy token
+    };
     
     localStorage.setItem('current_user', JSON.stringify(userData));
     
@@ -114,19 +63,21 @@ export const registerUser = async (name: string, email: string, password: string
 
 export const loginWithGoogle = async (googleData: GoogleUserData) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/auth/social`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(googleData),
-    });
+    // Use local storage for Google authentication
+    const result = loginWithGoogleLocal(googleData);
     
-    if (!response.ok) {
-      throw new Error(`Google sign-in failed: ${response.status}`);
+    if (!result.success) {
+      throw new Error('Google sign-in failed');
     }
     
-    const userData = await response.json();
+    // Create a user object similar to what the API would return
+    const userData = {
+      username: result.username || googleData.email,
+      email: googleData.email,
+      displayName: googleData.displayName || googleData.email.split('@')[0],
+      photoURL: googleData.photoURL,
+      token: `local-storage-token-${Date.now()}` // Dummy token
+    };
     
     localStorage.setItem('current_user', JSON.stringify(userData));
     
@@ -139,30 +90,34 @@ export const loginWithGoogle = async (googleData: GoogleUserData) => {
 
 export const getUserProfile = async () => {
   try {
-    const { data } = await api.get('/users/profile');
-    return data;
+    // Get user profile from local storage
+    const userInfo = localStorage.getItem('current_user');
+    if (!userInfo) {
+      throw new Error('User not found');
+    }
+    
+    return JSON.parse(userInfo);
   } catch (error: any) {
-    throw new Error(error.response?.data?.message || 'Failed to get user profile');
+    throw new Error(error.message || 'Failed to get user profile');
   }
 };
 
 export const updateUserProfile = async (userUpdateData: any) => {
   try {
-    const { data } = await api.put('/users/profile', userUpdateData);
-    
-    // Update localStorage with new user data
+    // Update user profile in local storage
     const userInfo = localStorage.getItem('current_user');
-    if (userInfo) {
-      const user = JSON.parse(userInfo);
-      localStorage.setItem(
-        'current_user',
-        JSON.stringify({ ...user, ...data })
-      );
+    if (!userInfo) {
+      throw new Error('User not found');
     }
     
-    return data;
+    const user = JSON.parse(userInfo);
+    const updatedUser = { ...user, ...userUpdateData };
+    
+    localStorage.setItem('current_user', JSON.stringify(updatedUser));
+    
+    return updatedUser;
   } catch (error: any) {
-    throw new Error(error.response?.data?.message || 'Failed to update user profile');
+    throw new Error(error.message || 'Failed to update user profile');
   }
 };
 
@@ -172,35 +127,82 @@ export const saveUserData = async (
   styleOptions: StyleOptions
 ) => {
   try {
-    const { data } = await api.post('/resumes', { resumeData, styleOptions });
-    return data;
+    // Get current user
+    const userInfo = localStorage.getItem('current_user');
+    if (!userInfo) {
+      throw new Error('User not authenticated');
+    }
+    
+    const user = JSON.parse(userInfo);
+    
+    // Save resume data to local storage
+    saveLocalUserData(user.username, resumeData, styleOptions);
+    
+    // Return a response similar to what the API would return
+    return {
+      resumeData,
+      styleOptions,
+      lastSaved: new Date().toISOString()
+    };
   } catch (error: any) {
-    throw new Error(error.response?.data?.message || 'Failed to save resume data');
+    throw new Error(error.message || 'Failed to save resume data');
   }
 };
 
-// New function for updating existing resume (used by auto-save)
+// Function for updating existing resume (used by auto-save)
 export const updateUserData = async (
   resumeData: ResumeData,
   styleOptions: StyleOptions
 ) => {
   try {
-    const { data } = await api.patch('/resumes', { resumeData, styleOptions });
-    return data;
+    // This is the same as saveUserData in the local storage implementation
+    return await saveUserData(resumeData, styleOptions);
   } catch (error: any) {
-    throw new Error(error.response?.data?.message || 'Failed to update resume data');
+    throw new Error(error.message || 'Failed to update resume data');
   }
 };
 
 export const getUserData = async () => {
   try {
-    const { data } = await api.get('/resumes');
-    return data;
+    // Get current user
+    const userInfo = localStorage.getItem('current_user');
+    if (!userInfo) {
+      throw new Error('User not authenticated');
+    }
+    
+    const user = JSON.parse(userInfo);
+    
+    // Get resume data from local storage
+    const userData = getLocalUserData(user.username);
+    
+    // Return a response similar to what the API would return
+    return {
+      resumeData: userData.resumeData || {
+        personalInfo: {
+          name: '',
+          title: '',
+          email: '',
+          phone: '',
+          location: '',
+          summary: '',
+        },
+        experience: [],
+        education: [],
+        skills: [],
+      },
+      styleOptions: userData.styleOptions || {
+        layout: 'minimal',
+        primaryColor: '#0ea5e9',
+        fontFamily: 'sans',
+        fontSize: 'base',
+      },
+      lastSaved: new Date().toISOString()
+    };
   } catch (error: any) {
-    throw new Error(error.response?.data?.message || 'Failed to get resume data');
+    throw new Error(error.message || 'Failed to get resume data');
   }
 };
 
 export const logoutUser = () => {
   localStorage.removeItem('current_user');
-}; 
+};

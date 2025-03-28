@@ -345,7 +345,6 @@ function App() {
         username: userData.username,
         isAuthenticated: true,
         displayName: userData.displayName,
-        photoURL: userData.photoURL,
         email: userData.email
       });
       
@@ -384,8 +383,8 @@ function App() {
       setUser({
         username: userData.username,
         isAuthenticated: true,
-        email: userData.email,
-        displayName: userData.displayName
+        displayName: userData.displayName,
+        email: userData.email
       });
       
       setShowAuthModal(false);
@@ -756,9 +755,9 @@ function App() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div className="space-y-6">
-            <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="space-y-5">
+            <div className="bg-white rounded-lg shadow-sm border border-slate-50 overflow-hidden">
               <ResumeForm 
                 data={resumeData} 
                 onChange={handleResumeChange} 
@@ -766,13 +765,13 @@ function App() {
                 onImportLinkedIn={importFromLinkedIn}
               />
             </div>
-            <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-5">
+            <div className="bg-white rounded-lg shadow-sm border border-slate-50 p-4">
               <StyleControls options={styleOptions} onChange={setStyleOptions} />
             </div>
           </div>
           
-          <div className="sticky top-8">
-            <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-5" ref={targetRef}>
+          <div className="sticky top-6">
+            <div className="bg-white rounded-lg shadow-sm border border-slate-50" ref={targetRef}>
               <ResumePreview data={resumeData} styleOptions={styleOptions} />
             </div>
           </div>
